@@ -2,9 +2,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-import datetime
+from datetime import datetime, timedelta, date
 import re
-import pandas as pd
 
 
 class WebDriverManager:
@@ -25,7 +24,7 @@ class PageDataParser:
         "DATE": "//span[@data-marker='item-view/item-date']",  # Date and time of publication
         "TITLE": "//h1[@data-marker='item-view/title-info']",  # Title of product
         "DESCRIPTION": "//div[@data-marker='item-view/item-description']",  # Description of product
-        "PRICE": "//span[@data-marker='item-view/item-price']",  # Product's price (can be either integer or "Бесплатно" or "Цена не указана")
+        "PRICE": "//span[@data-marker='item-view/item-price']",  # Product's price
         "VIEWS": "//span[@data-marker='item-view/total-views']",  # Number of views on product's page
         "ADDRESS": "//span[@class='style-item-address__string-wt61A']",  # Seller's address
         "CATEGORY": "//div[@data-marker='breadcrumbs']"  # Category of the product
@@ -46,7 +45,6 @@ class PageDataParser:
             self.driver.get(url)
         except Exception:
             print("Ссылка не корректна!")
-
 
     def get_product_id(self) -> int:
         element = WebDriverWait(self.driver, 10).until(
@@ -83,7 +81,17 @@ class PageDataParser:
         return cat_list[1:]
 
     def get_product_date(self) -> str:
-        pass
+        element = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, self.XPATH_TAGS["DATE"]))
+        )
+        time_pattern = r'\b\d{1,2}:\d{2}\b'  # re for cut time from string
+        if "вчера" in element.text:
+            return " ".join(map(str, (date.today() - timedelta(days=1), re.search(time_pattern, element.text).group(0))))
+
+        elif "сегодня" in element.text:
+            return " ".join(map(str, (date.today(), re.search(time_pattern, element.text).group(0))))
+        else:
+            return element.text[2:]
 
     def __call__(self, *args, **kwargs):
         """ Method to get dict of page's data """
@@ -99,4 +107,4 @@ class PageDataParser:
 
 page1 = PageDataParser("https://www.avito.ru/mahachkala/telefony/samsung_galaxy_a50_464_gb_4143989571")
 
-print(page1())
+print(page1.get_product_date())

@@ -19,20 +19,20 @@ class WebDriverManager:
 
 class PageDataParser:
 
-    XPATH_TAGS = {
+    XPATH_TAGS = {  # todo сделать в виде констант класса без использования словаря
         "ID": "//span[@data-marker='item-view/item-id']",  # Unique ID of product
         "DATE": "//span[@data-marker='item-view/item-date']",  # Date and time of publication
         "TITLE": "//h1[@data-marker='item-view/title-info']",  # Title of product
         "DESCRIPTION": "//div[@data-marker='item-view/item-description']",  # Description of product
         "PRICE": "//span[@data-marker='item-view/item-price']",  # Product's price
         "VIEWS": "//span[@data-marker='item-view/total-views']",  # Number of views on product's page
-        "ADDRESS": "//span[@class='style-item-address__string-wt61A']",  # Seller's address
+        "ADDRESS": "//span[@class='style-item-address__string-wt61A']",  # Seller's address # todo
         "CATEGORY": "//div[@data-marker='breadcrumbs']"  # Category of the product
     }
 
     def __init__(self, url: str, driver=WebDriverManager.init_webdriver()):
         self.driver = driver
-        self.url = self.verify_url(url)  # Потом реализовать проверку ссылки
+        self.url = self.verify_url(url)
 
     def verify_url(self, url):
         if not isinstance(url, str):
@@ -66,6 +66,7 @@ class PageDataParser:
 
     def get_product_category_path(self) -> list:
         cat_list = []
+        # todo сделать find_elements(XPATH, "//span[@itemprop='name']") - вернет список
         element = WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located((By.XPATH, self.XPATH_TAGS["CATEGORY"]))
         )
@@ -93,18 +94,38 @@ class PageDataParser:
         else:
             return element.text[2:]
 
+    def get_product_description(self) -> str:
+        element = self.driver.find_element(By.XPATH, self.XPATH_TAGS["DESCRIPTION"])
+        return element.text
+
+    def get_product_total_views(self) -> int:
+        element = self.driver.find_element(By.XPATH, self.XPATH_TAGS["VIEWS"])
+        total_views = int(element.text.split()[0])
+        return total_views
+
+    def get_product_address(self) -> str:
+        element = self.driver.find_element(By.XPATH, self.XPATH_TAGS["ADDRESS"])
+        return element.text
+
+    def get_product_specs(self) -> list:  # todo Do a method to dynamic parse of product's specs
+        pass
+
     def __call__(self, *args, **kwargs):
         """ Method to get dict of page's data """
 
         page_data_dict = {
             "ID": self.get_product_id(),
             "TITLE": self.get_product_title(),
+            "DATE": self.get_product_date(),
             "PRICE": self.get_product_price(),
-            "CATEGORIES": self.get_product_category_path()
+            "CATEGORIES": self.get_product_category_path(),
+            "DESCRIPTION": self.get_product_description(),
+            "VIEWS": self.get_product_total_views(),
+            "SPECS": self.get_product_specs()
         }
         return page_data_dict
 
 
 page1 = PageDataParser("https://www.avito.ru/mahachkala/telefony/samsung_galaxy_a50_464_gb_4143989571")
 
-print(page1.get_product_date())
+print(page1.get_product_address())

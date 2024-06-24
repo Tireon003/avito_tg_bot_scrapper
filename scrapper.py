@@ -33,8 +33,20 @@ class PageDataParser:
 
     def __init__(self, url: str, driver=WebDriverManager.init_webdriver()):
         self.driver = driver
-        self.url = url  # Потом реализовать проверку ссылки
-        self.driver.get(url)
+        self.url = self.verify_url(url)  # Потом реализовать проверку ссылки
+
+    def verify_url(self, url):
+        if not isinstance(url, str):
+            raise TypeError("Ссылка должна быть строкой")
+        elif not url.startswith("https://www.avito.ru/"):
+            raise ValueError("Ссылка должна иметь домен www.avito.ru")
+        elif not url:
+            raise ValueError("Ссылка должна быть непустой строкой")
+        try:
+            self.driver.get(url)
+        except Exception:
+            print("Ссылка не корректна!")
+
 
     def get_product_id(self) -> int:
         element = WebDriverWait(self.driver, 10).until(
@@ -70,8 +82,11 @@ class PageDataParser:
                 cat_list.append(cat_el)
         return cat_list[1:]
 
+    def get_product_date(self) -> str:
+        pass
+
     def __call__(self, *args, **kwargs):
-        """ Calling an instance to get dict of page data """
+        """ Method to get dict of page's data """
 
         page_data_dict = {
             "ID": self.get_product_id(),

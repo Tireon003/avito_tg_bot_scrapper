@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-from datetime import datetime, timedelta, date
+from datetime import timedelta, date
 import re
 
 
@@ -25,12 +25,13 @@ class PageDataParser:
     DESCRIPTION = "//div[@data-marker='item-view/item-description']"  # Description of product
     PRICE = "//span[@data-marker='item-view/item-price']"  # Product's price
     VIEWS = "//span[@data-marker='item-view/total-views']"  # Number of views on product's page
-    ADDRESS = "//span[@class='style-item-address__string-wt61A']"  # Seller's address # todo
+    ADDRESS = "//span[@class='style-item-address__string-wt61A']"  # Seller's address
     CATEGORY = "//div[@data-marker='breadcrumbs']"  # Category of the product
 
     def __init__(self, url: str, driver=WebDriverManager.init_webdriver()):
         self.driver = driver
         self.url = self.verify_url(url)
+        self.driver.implicitly_wait(7)
 
     def verify_url(self, url):
         if not isinstance(url, str):
@@ -45,38 +46,22 @@ class PageDataParser:
             print("Ссылка не корректна!")
 
     def get_product_id(self) -> int:
-        element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.ID))
-        )
+        element = self.driver.find_element(By.XPATH, self.ID)
         return int(element.text[2:])
 
     def get_product_title(self) -> str:
-        element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.TITLE))
-        )
+        element = self.driver.find_element(By.XPATH, self.TITLE)
         return element.text
 
-    def get_product_price(self) -> int:
-        element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.PRICE))
-        )
-        return int(element.get_attribute("content"))
+    def get_product_price(self) -> str:
+        element = self.driver.find_element(By.XPATH, self.PRICE)
+        return element.get_attribute("content")
 
     def get_product_category_path(self) -> list:
         cat_list = []
-        # todo сделать find_elements(XPATH, "//span[@itemprop='name']") - вернет список
-        element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.CATEGORY))
-        )
-        cat_text = element.text
-        cat_el = cat_text[0]
-        for i in range(1, len(cat_text)):
-            if cat_text[i-1].islower() and cat_text[i].isupper():
-                cat_list.append(cat_el)
-                cat_el = ""
-            cat_el += cat_text[i]
-            if i == len(cat_text) - 1:
-                cat_list.append(cat_el)
+        elements = self.driver.find_elements(By.XPATH, "//span[@itemprop='itemListElement']")
+        for item in elements:
+            cat_list.append(item.text)
         return cat_list[1:]
 
     def get_product_date(self) -> str:
@@ -85,8 +70,9 @@ class PageDataParser:
         )
         time_pattern = r'\b\d{1,2}:\d{2}\b'  # re for cut time from string
         if "вчера" in element.text:
-            return " ".join(map(str, (date.today() - timedelta(days=1), re.search(time_pattern, element.text).group(0))))
-
+            return " ".join(map(
+                str, (date.today() - timedelta(days=1), re.search(time_pattern, element.text).group(0))
+            ))
         elif "сегодня" in element.text:
             return " ".join(map(str, (date.today(), re.search(time_pattern, element.text).group(0))))
         else:
@@ -105,9 +91,11 @@ class PageDataParser:
         element = self.driver.find_element(By.XPATH, self.ADDRESS)
         return element.text
 
-    def get_product_specs(self) -> list:  # todo Do a method to dynamic parse of product's specs
+    def get_product_specs(self) -> list:
         specs_xpath = "//div[@data-marker='item-view/item-params']"
         elements = self.driver.find_elements(By.XPATH, specs_xpath)
+        if not len(elements):
+            return []
         elements = elements[-1].find_elements(By.XPATH, "./ul/li")
         product_specs = []
         for item in elements:
@@ -133,7 +121,7 @@ class PageDataParser:
         return page_data_dict
 
 
-page1 = PageDataParser("https://www.avito.ru/mahachkala/telefony/samsung_galaxy_a50_464_gb_4143989571")
+page1 = PageDataParser("https://www.avito.ru/mahachkala/produkty_pitaniya/shokolad_molochnyy_6_kg_4036950274")
 
 for key, value in page1().items():
     print(key, value, sep=" - ")

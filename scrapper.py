@@ -19,16 +19,14 @@ class WebDriverManager:
 
 class PageDataParser:
 
-    XPATH_TAGS = {  # todo сделать в виде констант класса без использования словаря
-        "ID": "//span[@data-marker='item-view/item-id']",  # Unique ID of product
-        "DATE": "//span[@data-marker='item-view/item-date']",  # Date and time of publication
-        "TITLE": "//h1[@data-marker='item-view/title-info']",  # Title of product
-        "DESCRIPTION": "//div[@data-marker='item-view/item-description']",  # Description of product
-        "PRICE": "//span[@data-marker='item-view/item-price']",  # Product's price
-        "VIEWS": "//span[@data-marker='item-view/total-views']",  # Number of views on product's page
-        "ADDRESS": "//span[@class='style-item-address__string-wt61A']",  # Seller's address # todo
-        "CATEGORY": "//div[@data-marker='breadcrumbs']"  # Category of the product
-    }
+    ID = "//span[@data-marker='item-view/item-id']"  # Unique ID of product
+    DATE = "//span[@data-marker='item-view/item-date']"  # Date and time of publication
+    TITLE = "//h1[@data-marker='item-view/title-info']"  # Title of product
+    DESCRIPTION = "//div[@data-marker='item-view/item-description']"  # Description of product
+    PRICE = "//span[@data-marker='item-view/item-price']"  # Product's price
+    VIEWS = "//span[@data-marker='item-view/total-views']"  # Number of views on product's page
+    ADDRESS = "//span[@class='style-item-address__string-wt61A']"  # Seller's address # todo
+    CATEGORY = "//div[@data-marker='breadcrumbs']"  # Category of the product
 
     def __init__(self, url: str, driver=WebDriverManager.init_webdriver()):
         self.driver = driver
@@ -48,19 +46,19 @@ class PageDataParser:
 
     def get_product_id(self) -> int:
         element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.XPATH_TAGS["ID"]))
+            EC.presence_of_element_located((By.XPATH, self.ID))
         )
         return int(element.text[2:])
 
     def get_product_title(self) -> str:
         element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.XPATH_TAGS["TITLE"]))
+            EC.presence_of_element_located((By.XPATH, self.TITLE))
         )
         return element.text
 
     def get_product_price(self) -> int:
         element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.XPATH_TAGS["PRICE"]))
+            EC.presence_of_element_located((By.XPATH, self.PRICE))
         )
         return int(element.get_attribute("content"))
 
@@ -68,7 +66,7 @@ class PageDataParser:
         cat_list = []
         # todo сделать find_elements(XPATH, "//span[@itemprop='name']") - вернет список
         element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.XPATH_TAGS["CATEGORY"]))
+            EC.presence_of_element_located((By.XPATH, self.CATEGORY))
         )
         cat_text = element.text
         cat_el = cat_text[0]
@@ -83,7 +81,7 @@ class PageDataParser:
 
     def get_product_date(self) -> str:
         element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.XPATH_TAGS["DATE"]))
+            EC.presence_of_element_located((By.XPATH, self.DATE))
         )
         time_pattern = r'\b\d{1,2}:\d{2}\b'  # re for cut time from string
         if "вчера" in element.text:
@@ -95,20 +93,29 @@ class PageDataParser:
             return element.text[2:]
 
     def get_product_description(self) -> str:
-        element = self.driver.find_element(By.XPATH, self.XPATH_TAGS["DESCRIPTION"])
+        element = self.driver.find_element(By.XPATH, self.DESCRIPTION)
         return element.text
 
     def get_product_total_views(self) -> int:
-        element = self.driver.find_element(By.XPATH, self.XPATH_TAGS["VIEWS"])
+        element = self.driver.find_element(By.XPATH, self.VIEWS)
         total_views = int(element.text.split()[0])
         return total_views
 
     def get_product_address(self) -> str:
-        element = self.driver.find_element(By.XPATH, self.XPATH_TAGS["ADDRESS"])
+        element = self.driver.find_element(By.XPATH, self.ADDRESS)
         return element.text
 
     def get_product_specs(self) -> list:  # todo Do a method to dynamic parse of product's specs
-        pass
+        specs_xpath = "//div[@data-marker='item-view/item-params']"
+        elements = self.driver.find_elements(By.XPATH, specs_xpath)
+        elements = elements[-1].find_elements(By.XPATH, "./ul/li")
+        product_specs = []
+        for item in elements:
+            item_spec_name = item.find_element(By.TAG_NAME, "span").text
+            item_spec_value = item.text.replace(item_spec_name, '').strip()
+            item_spec_name = item_spec_name.strip(":")
+            product_specs.append((item_spec_name, item_spec_value))
+        return product_specs
 
     def __call__(self, *args, **kwargs):
         """ Method to get dict of page's data """
@@ -128,4 +135,5 @@ class PageDataParser:
 
 page1 = PageDataParser("https://www.avito.ru/mahachkala/telefony/samsung_galaxy_a50_464_gb_4143989571")
 
-print(page1.get_product_address())
+for key, value in page1().items():
+    print(key, value, sep=" - ")

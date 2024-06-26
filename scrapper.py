@@ -8,6 +8,7 @@ import re
 
 # todo Главная проблема: обойти блокировки по IP!
 
+
 class WebDriverManager:
 
     options = webdriver.ChromeOptions()
@@ -16,14 +17,14 @@ class WebDriverManager:
         self.options.page_load_strategy = "eager"
         self.options.add_experimental_option("detach", True)
         self.driver = webdriver.Chrome(options=self.options)
-        print("Драйвен инициализирован")
+        print("Драйвен инициализирован")  # debug for devs
 
     def init_webdriver(self):
-        print("Драйвер запущен")
+        print("Драйвер запущен")  # debug for devs
         return self.driver
 
     def close_webdriver(self):
-        print("Драйвер удален")
+        print("Драйвер удален")  # debug for devs
         self.driver.close()
 
 

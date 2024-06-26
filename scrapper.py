@@ -11,12 +11,12 @@ import re
 
 class WebDriverManager:
 
-    options = webdriver.ChromeOptions()
+    __options = webdriver.ChromeOptions()
 
     def __init__(self):
-        self.options.page_load_strategy = "eager"
-        self.options.add_experimental_option("detach", True)
-        self.driver = webdriver.Chrome(options=self.options)
+        self.__options.page_load_strategy = "eager"
+        self.__options.add_experimental_option("detach", True)
+        self.driver = webdriver.Chrome(options=self.__options)
         print("Драйвен инициализирован")  # debug for devs
 
     def init_webdriver(self):
@@ -53,7 +53,7 @@ class PageDataParser:
         #  todo При использовании close() будет удаляться вкладка на которой фокус т.е на текущей
         self.driver = driver
         self.url = self.verify_url(url)
-        self.driver.implicitly_wait(7)
+        self.driver.implicitly_wait(6)
 
     def verify_url(self, url):
         if not isinstance(url, str):
@@ -87,9 +87,7 @@ class PageDataParser:
         return cat_list[1:]
 
     def get_product_date(self) -> str:
-        element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, self.DATE))
-        )
+        element = self.driver.find_element(By.XPATH, self.DATE)
         time_pattern = r'\b\d{1,2}:\d{2}\b'  # re for cut time from string
         if "вчера" in element.text:
             return " ".join(map(
@@ -152,10 +150,10 @@ class CategoryParser:
     def __init__(self, new_driver: webdriver):
         self.driver = new_driver
         self.driver.get("https://www.avito.ru/")
-        self.driver.implicitly_wait(10)
+        self.driver.implicitly_wait(6)
 
     @staticmethod
-    def verify_location(location):
+    def verify_location(location: str):
         location_without_dash = location.replace("-", "")
         if not location_without_dash.isalpha():
             return "Некорректное наименование локации!"
@@ -167,8 +165,20 @@ class CategoryParser:
     def choose_category(self):
         pass
 
-    def change_sort_method(self):
-        pass
+    # todo метод не проверял, после реализации метода choose_category() проверить в купе
+    def change_sort_method(self, sort_method_value: str):
+        sort_settings_button_xpath = '//span[@data-marker="sort/title"]'
+        choose_sort_element = self.driver.find_element(By.XPATH, sort_settings_button_xpath)
+        choose_sort_element.click()
+        sort_methods_list_xpath = '//div[@data-marker="sort/dropdown"]'
+        sort_methods_elements = self.driver.find_elements(By.XPATH, sort_methods_list_xpath)
+        for item in sort_methods_elements:
+            if item.text.strip().lower() == sort_method_value.strip().lower():
+                item.click()
+                return f'Метод сортировки изменен на {sort_method_value.capitalize()}'
+        else:
+            sort_methods_elements[0].click()
+            return f"Метод сортировки не изменен"
 
     def set_search_location(self, location_name: str):
         location_name = self.verify_location(location_name)

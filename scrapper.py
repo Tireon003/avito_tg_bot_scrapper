@@ -2,7 +2,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support.ui import Select
 from datetime import timedelta, date
+import time
 import re
 
 
@@ -18,6 +20,15 @@ class WebDriverManager:
 
 
 class PageDataParser:
+    """
+    Class PageDataParser contains logic of parsing data from product's page
+
+    Input arguments:
+     - url: URL-address of product's page, string data
+     - driver: instance of webdriver, by default takes driver from WebDriverManager().init_webdriver()
+               Use external driver if you want to create instances for many URL's in a loop.
+
+    """
 
     ID = "//span[@data-marker='item-view/item-id']"  # Unique ID of product
     DATE = "//span[@data-marker='item-view/item-date']"  # Date and time of publication
@@ -120,8 +131,62 @@ class PageDataParser:
         }
         return page_data_dict
 
+class SearchFilter:
+    pass
 
-page1 = PageDataParser("https://www.avito.ru/mahachkala/produkty_pitaniya/shokolad_molochnyy_6_kg_4036950274")
 
-for key, value in page1().items():
-    print(key, value, sep=" - ")
+class CategoryParser:
+
+    def __init__(self, driver: webdriver):
+        self.driver = driver
+        self.driver.get("https://www.avito.ru/")
+
+    def filter_configuration(self):
+        pass
+
+    def choose_category(self):
+        pass
+
+    def change_sort_method(self):
+        pass
+
+    def set_search_location(self, location_name: str): # todo доработать выбор из списка, на примере Красноярска выбирается Красноярский край, надо находить в списке элемент где именно это слово, иначе брать первое совпадение
+        location_name = location_name.title()
+        current_location_xpath = '//div[@data-marker="search-form/change-location"]'
+        element = self.driver.find_element(By.XPATH, current_location_xpath)
+        element.click()
+        self.driver.implicitly_wait(3)
+        input_location_xpath = "//input[@data-marker='popup-location/region/search-input']"
+        input_location_element = self.driver.find_element(By.XPATH, input_location_xpath)
+        input_location_element.click()
+        input_location_element.clear()
+        input_location_element.send_keys(location_name)
+        time.sleep(2)
+        found_locations_xpath = "//button[@data-marker='popup-location/region/custom-option([object Object])']"
+        found_locations_list = self.driver.find_elements(By.XPATH, found_locations_xpath)
+        if not len(found_locations_list):
+            close_button_xpath = "//button[@data-marker='popup-location/close']"
+            close_button_element = self.driver.find_element(By.XPATH, close_button_xpath)
+            close_button_element.click()
+            return f"Локация {location_name} не найдена"
+        print(found_locations_list[0].text) # удалить потом
+        found_locations_list[0].click()
+        self.driver.implicitly_wait(3) # насчет этого не знаю
+        apply_changes_element_xpath = "//button[@data-marker='popup-location/save-button']"
+        apply_button = self.driver.find_element(By.XPATH, apply_changes_element_xpath)
+        apply_button.click()
+        #
+        time.sleep(2)
+        #
+        return f"Локация для поиска изменена на {location_name}"
+
+
+
+
+#page1 = PageDataParser("https://www.avito.ru/mahachkala/vakansii/montazhnik_4058250834")
+index_page = CategoryParser(WebDriverManager.init_webdriver())
+print(index_page.set_search_location("красноярск"))
+
+#for key, value in page1().items():
+#    print(key, value, sep=" - ")
+

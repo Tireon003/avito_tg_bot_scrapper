@@ -2,21 +2,29 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support.ui import Select
 from datetime import timedelta, date
 import time
 import re
 
+# todo Главная проблема: обойти блокировки по IP!
 
 class WebDriverManager:
 
-    OPTIONS = webdriver.ChromeOptions().page_load_strategy = "eager"
+    options = webdriver.ChromeOptions()
 
-    @classmethod
-    def init_webdriver(cls):
-        options = webdriver.ChromeOptions()
-        options.page_load_strategy = "eager"
-        return webdriver.Chrome(options=options)
+    def __init__(self):
+        self.options.page_load_strategy = "eager"
+        self.options.add_experimental_option("detach", True)
+        self.driver = webdriver.Chrome(options=self.options)
+        print("Драйвен инициализирован")
+
+    def init_webdriver(self):
+        print("Драйвер запущен")
+        return self.driver
+
+    def close_webdriver(self):
+        print("Драйвер удален")
+        self.driver.close()
 
 
 class PageDataParser:
@@ -25,8 +33,7 @@ class PageDataParser:
 
     Input arguments:
      - url: URL-address of product's page, string data
-     - driver: instance of webdriver, by default takes driver from WebDriverManager().init_webdriver()
-               Use external driver if you want to create instances for many URL's in a loop.
+     - driver: instance of webdriver.
 
     """
 
@@ -39,7 +46,10 @@ class PageDataParser:
     ADDRESS = "//span[@class='style-item-address__string-wt61A']"  # Seller's address
     CATEGORY = "//div[@data-marker='breadcrumbs']"  # Category of the product
 
-    def __init__(self, url: str, driver=WebDriverManager.init_webdriver()):
+    def __init__(self, url: str, driver: webdriver):
+        #  todo Когда буду делать парсинг данных асинхронно, добавить сохранение и изменение контекста вкладки
+        #  todo Реализоваь функцию, которая будет открывать новую вкладку в браузере и сохранять контекст вкладки
+        #  todo При использовании close() будет удаляться вкладка на которой фокус т.е на текущей
         self.driver = driver
         self.url = self.verify_url(url)
         self.driver.implicitly_wait(7)
@@ -131,15 +141,24 @@ class PageDataParser:
         }
         return page_data_dict
 
+
 class SearchFilter:
     pass
 
 
 class CategoryParser:
 
-    def __init__(self, driver: webdriver):
-        self.driver = driver
+    def __init__(self, new_driver: webdriver):
+        self.driver = new_driver
         self.driver.get("https://www.avito.ru/")
+        self.driver.implicitly_wait(10)
+
+    @staticmethod
+    def verify_location(location):
+        location_without_dash = location.replace("-", "")
+        if not location_without_dash.isalpha():
+            return "Некорректное наименование локации!"
+        return location.title().strip()
 
     def filter_configuration(self):
         pass
@@ -150,43 +169,56 @@ class CategoryParser:
     def change_sort_method(self):
         pass
 
-    def set_search_location(self, location_name: str): # todo доработать выбор из списка, на примере Красноярска выбирается Красноярский край, надо находить в списке элемент где именно это слово, иначе брать первое совпадение
-        location_name = location_name.title()
+    def set_search_location(self, location_name: str):
+        location_name = self.verify_location(location_name)
         current_location_xpath = '//div[@data-marker="search-form/change-location"]'
         element = self.driver.find_element(By.XPATH, current_location_xpath)
         element.click()
-        self.driver.implicitly_wait(3)
         input_location_xpath = "//input[@data-marker='popup-location/region/search-input']"
         input_location_element = self.driver.find_element(By.XPATH, input_location_xpath)
         input_location_element.click()
         input_location_element.clear()
+        time.sleep(1)
         input_location_element.send_keys(location_name)
-        time.sleep(2)
+        time.sleep(1)
         found_locations_xpath = "//button[@data-marker='popup-location/region/custom-option([object Object])']"
         found_locations_list = self.driver.find_elements(By.XPATH, found_locations_xpath)
-        if not len(found_locations_list):
-            close_button_xpath = "//button[@data-marker='popup-location/close']"
-            close_button_element = self.driver.find_element(By.XPATH, close_button_xpath)
-            close_button_element.click()
-            return f"Локация {location_name} не найдена"
-        print(found_locations_list[0].text) # удалить потом
-        found_locations_list[0].click()
-        self.driver.implicitly_wait(3) # насчет этого не знаю
+        for item in found_locations_list:
+            print(item.text)
+            if location_name == item.text.strip() or location_name + "," in item.text.strip():
+                item.click()
+                break
+        else:
+            found_locations_list[0].click()
         apply_changes_element_xpath = "//button[@data-marker='popup-location/save-button']"
         apply_button = self.driver.find_element(By.XPATH, apply_changes_element_xpath)
         apply_button.click()
-        #
         time.sleep(2)
-        #
-        return f"Локация для поиска изменена на {location_name}"
+        new_location_element = self.driver.find_element(By.XPATH, current_location_xpath)
+        return f"Локация для поиска изменена на {new_location_element.text} или похожую"
+
+#  code debug
 
 
+manager = WebDriverManager()  # Создается экземпляр драйвера
+my_driver = manager.init_webdriver()  # Получаем ссылку на созданный драйвер
+index_page = CategoryParser(my_driver)  # Используем драйвер в нужном классе
+print(index_page.set_search_location("Махачкала"))  # Проверка работы метода смены локации поиска объявлений
 
 
-#page1 = PageDataParser("https://www.avito.ru/mahachkala/vakansii/montazhnik_4058250834")
-index_page = CategoryParser(WebDriverManager.init_webdriver())
-print(index_page.set_search_location("красноярск"))
+for i in range(3):
+    print(i)
+    time.sleep(1)
 
-#for key, value in page1().items():
-#    print(key, value, sep=" - ")
+del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу
+
+# Проверяем работу парсера данных со страницы объявления
+page1 = PageDataParser("https://www.avito.ru/mahachkala/vakansii/montazhnik_4058250834", my_driver)
+
+# Выводим информацию, которую мы спарсили в виде <Ключ> - <Значение>.
+for key, value in page1().items():
+    print(key, value, sep=" - ")
+
+# Закрываем вкладку бразуера (если вкладка последняя, то окно), теперь драйвер можно удалять
+manager.close_webdriver()
 

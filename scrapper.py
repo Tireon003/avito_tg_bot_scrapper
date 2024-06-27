@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.common.exceptions import NoSuchElementException
 from datetime import timedelta, date
 import time
 import re
@@ -16,6 +17,9 @@ class WebDriverManager:
     def __init__(self):
         self.__options.page_load_strategy = "eager"
         self.__options.add_experimental_option("detach", True)
+        self.__options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        self.__options.add_experimental_option('useAutomationExtension', False)
+        self.__options.add_argument("--disable-blink-features=AutomationControlled")
         self.driver = webdriver.Chrome(options=self.__options)
         print("Драйвен инициализирован")  # debug for devs
 
@@ -151,7 +155,7 @@ class CategoryParser:
     def __init__(self, new_driver: webdriver):
         self.driver = new_driver
         self.driver.get("https://www.avito.ru/")
-        self.driver.implicitly_wait(6)
+        self.driver.implicitly_wait(7)
 
     @staticmethod
     def verify_location(location: str):
@@ -166,23 +170,34 @@ class CategoryParser:
     def get_category_list(self):
 
         """ Method returns list of web elements of categories """
-
+        time.sleep(5)
         show_categories_xpath = '//button[@data-marker="top-rubricator/all-categories"]'
         show_categories_button_element = self.driver.find_element(By.XPATH, show_categories_xpath)
         show_categories_button_element.click()
-        time.sleep(1)
+        time.sleep(2)
         category_list_xpath = '//div[@class="new-rubricator-content-leftcontent-_hhyV"]'
         category_list_elements = self.driver.find_elements(By.XPATH, category_list_xpath)
         return category_list_elements
 
-    def set_category(self):
+    def set_category(self, chosen_category):
         """
         Метод будет принимать в себя выбранный пользователем элемент (категорию)
         Метод будет так же, как и get_category_list, переходить в раздел категорий, и фокусироваться на нужной
 
         :return: Список подкатегорий данный категории
         """
-        pass
+        time.sleep(3)
+        category_list_xpath = '//div[@class="new-rubricator-content-leftcontent-_hhyV"]'
+        if not len(self.driver.find_elements(By.XPATH, category_list_xpath)):
+            raise NoSuchElementException("На странице в данный момент времени нет окна выбора категории.")
+        chosen_category.click()
+        print("chosen_category clicked")
+        subcategories = self.driver.find_elements(
+            By.XPATH,
+            '//a[@data-name and @data-cid]'
+        )
+
+        return subcategories
 
     def set_subcategory(self):
         """
@@ -245,21 +260,26 @@ class CategoryParser:
 manager = WebDriverManager()  # Создается экземпляр драйвера
 my_driver = manager.init_webdriver()  # Получаем ссылку на созданный драйвер
 index_page = CategoryParser(my_driver)  # Используем драйвер в нужном классе
-print(index_page.set_search_location("Махачкала"))  # Проверка работы метода смены локации поиска объявлений
+#print(index_page.set_search_location("Махачкала"))  # Проверка работы метода смены локации поиска объявлений
+
+cat_list = index_page.get_category_list()
+print("Первый принт:", *[i.text for i in cat_list], sep="\n")
+
+print(len(cat_list))
+for item in cat_list:
+    for el in index_page.set_category(item):
+        print(el.text, end=' | ')
+    print()
 
 
-for i in index_page.get_category_list():
-    print(i.text)
-    time.sleep(1)
-
-del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу
+#del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу
 
 # Проверяем работу парсера данных со страницы объявления
-page1 = PageDataParser("https://www.avito.ru/moskva/vodnyy_transport/novaya_parusnaya_yahta_antila_26_classik_pr.belarus_1175058901", my_driver)
+#page1 = PageDataParser("https://www.avito.ru/moskva/vodnyy_transport/novaya_parusnaya_yahta_antila_26_classik_pr.belarus_1175058901", my_driver)
 
 # Выводим информацию, которую мы спарсили в виде <Ключ> - <Значение>.
-for key, value in page1().items():
-    print(key, value, sep=" - ")
+#for key, value in page1().items():
+#    print(key, value, sep=" - ")
 
 # Закрываем вкладку бразуера (если вкладка последняя, то окно), теперь драйвер можно удалять
 manager.close_webdriver()

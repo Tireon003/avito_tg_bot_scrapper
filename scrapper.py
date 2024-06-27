@@ -53,7 +53,7 @@ class PageDataParser:
         #  todo При использовании close() будет удаляться вкладка на которой фокус т.е на текущей
         self.driver = driver
         self.url = self.verify_url(url)
-        self.driver.implicitly_wait(6)
+        self.driver.implicitly_wait(10)
 
     def verify_url(self, url):
         if not isinstance(url, str):
@@ -133,6 +133,7 @@ class PageDataParser:
             "TITLE": self.get_product_title(),
             "DATE": self.get_product_date(),
             "PRICE": self.get_product_price(),
+            "ADDRESS": self.get_product_address(),
             "CATEGORIES": self.get_product_category_path(),
             "DESCRIPTION": self.get_product_description(),
             "VIEWS": self.get_product_total_views(),
@@ -162,14 +163,44 @@ class CategoryParser:
     def filter_configuration(self):
         pass
 
-    def choose_category(self):
+    def get_category_list(self):
+
+        """ Method returns list of web elements of categories """
+
+        show_categories_xpath = '//button[@data-marker="top-rubricator/all-categories"]'
+        show_categories_button_element = self.driver.find_element(By.XPATH, show_categories_xpath)
+        show_categories_button_element.click()
+        time.sleep(1)
+        category_list_xpath = '//div[@class="new-rubricator-content-leftcontent-_hhyV"]'
+        category_list_elements = self.driver.find_elements(By.XPATH, category_list_xpath)
+        return category_list_elements
+
+    def set_category(self):
+        """
+        Метод будет принимать в себя выбранный пользователем элемент (категорию)
+        Метод будет так же, как и get_category_list, переходить в раздел категорий, и фокусироваться на нужной
+
+        :return: Список подкатегорий данный категории
+        """
         pass
 
-    # todo метод не проверял, после реализации метода choose_category() проверить в купе
-    def change_sort_method(self, sort_method_value: str):
+    def set_subcategory(self):
+        """
+        На вход поступает элемент списка подкатегории.
+        Затем метод кликает на выбранный пользоватетем пункт
+        По окончании работы метода загружается страница с объявлениями выбранной категории и подкатегории.
+
+        :return: Метод возвращает ссылку на открытую страницу *self.driver.current_url
+        """
+
+        pass
+
+    # todo создать метод get_sort_settings() -> element, затем можно нужный элемент передавать в данный метод
+    def change_sort_method(self, sort_method_value):
         sort_settings_button_xpath = '//span[@data-marker="sort/title"]'
         choose_sort_element = self.driver.find_element(By.XPATH, sort_settings_button_xpath)
         choose_sort_element.click()
+        # Если на вход будем получать сразу нужный элемент, то можно сразу сделать клик на элемент и все
         sort_methods_list_xpath = '//div[@data-marker="sort/dropdown"]'
         sort_methods_elements = self.driver.find_elements(By.XPATH, sort_methods_list_xpath)
         for item in sort_methods_elements:
@@ -217,14 +248,14 @@ index_page = CategoryParser(my_driver)  # Используем драйвер в
 print(index_page.set_search_location("Махачкала"))  # Проверка работы метода смены локации поиска объявлений
 
 
-for i in range(3):
-    print(i)
+for i in index_page.get_category_list():
+    print(i.text)
     time.sleep(1)
 
 del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу
 
 # Проверяем работу парсера данных со страницы объявления
-page1 = PageDataParser("https://www.avito.ru/mahachkala/vakansii/montazhnik_4058250834", my_driver)
+page1 = PageDataParser("https://www.avito.ru/moskva/vodnyy_transport/novaya_parusnaya_yahta_antila_26_classik_pr.belarus_1175058901", my_driver)
 
 # Выводим информацию, которую мы спарсили в виде <Ключ> - <Значение>.
 for key, value in page1().items():

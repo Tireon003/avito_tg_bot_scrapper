@@ -120,13 +120,14 @@ class PageDataParser:
         elements = self.driver.find_elements(By.XPATH, specs_xpath)
         if not len(elements):
             return []
-        elements = elements[-1].find_elements(By.XPATH, "./ul/li")
         product_specs = []
-        for item in elements:
-            item_spec_name = item.find_element(By.TAG_NAME, "span").text
-            item_spec_value = item.text.replace(item_spec_name, '').strip()
-            item_spec_name = item_spec_name.strip(":")
-            product_specs.append((item_spec_name, item_spec_value))
+        for section in elements:
+            section_ul_li = section.find_elements(By.XPATH, "./ul/li")
+            for item in section_ul_li:
+                item_spec_name = item.find_element(By.TAG_NAME, "span").text
+                item_spec_value = item.text.replace(item_spec_name, '').strip()
+                item_spec_name = item_spec_name.strip(":")
+                product_specs.append((item_spec_name, item_spec_value))
         return product_specs
 
     def __call__(self, *args, **kwargs):
@@ -150,7 +151,7 @@ class SearchFilter:
     pass
 
 
-class CategoryParser:
+class CategoryParser:  # todo Настроить ограничения на количество объявлений в парсинге. Также не обрабатываем никакие команды в процессе обработки действующего запроса. На данном этапе парсинг будет синхронным.
 
     def __init__(self, new_driver: webdriver):
         self.driver = new_driver
@@ -175,11 +176,11 @@ class CategoryParser:
         show_categories_button_element = self.driver.find_element(By.XPATH, show_categories_xpath)
         show_categories_button_element.click()
         time.sleep(2)
-        category_list_xpath = '//div[@class="new-rubricator-content-leftcontent-_hhyV"]'
+        category_list_xpath = '//div[@class="new-rubricator-content-leftcontent-_hhyV"]/div[@data-marker]'
         category_list_elements = self.driver.find_elements(By.XPATH, category_list_xpath)
         return category_list_elements
 
-    def set_category(self, chosen_category):
+    def set_category(self, chosen_category):  # todo вынести получение подкатегорий в отдельный метод
         """
         Метод будет принимать в себя выбранный пользователем элемент (категорию)
         Метод будет так же, как и get_category_list, переходить в раздел категорий, и фокусироваться на нужной
@@ -197,9 +198,12 @@ class CategoryParser:
             '//a[@data-name and @data-cid]'
         )
 
+        # todo ОБЯЗАТЕЛЬНО: метод парсит не все подкатегории, нужно прожимать кнопки "ещё ...",
+        # затем уже парсить список подкатегорий
+
         return subcategories
 
-    def set_subcategory(self):
+    def set_subcategory(self, selected_subcategory_element):
         """
         На вход поступает элемент списка подкатегории.
         Затем метод кликает на выбранный пользоватетем пункт
@@ -208,7 +212,9 @@ class CategoryParser:
         :return: Метод возвращает ссылку на открытую страницу *self.driver.current_url
         """
 
-        pass
+        selected_subcategory_element.click()
+        time.sleep(2)
+        return self.driver.current_url
 
     # todo создать метод get_sort_settings() -> element, затем можно нужный элемент передавать в данный метод
     def change_sort_method(self, sort_method_value):
@@ -254,6 +260,20 @@ class CategoryParser:
         new_location_element = self.driver.find_element(By.XPATH, current_location_xpath)
         return f"Локация для поиска изменена на {new_location_element.text} или похожую"
 
+
+class ParserConfigurator:
+
+    def configure_location(self):  # Перенести метод из класса CategoryParser сюда
+        pass
+
+    def reset_configuration(self):  # Метод для сброса настроек по умолчанию (Локация: Москва, Формат вывода: .csv)
+        pass
+
+    def select_export_format(self):  # Выбираем формата файла вывода данных (.xlsx, .csv)
+        pass
+
+# todo Реализовать возможность парсинга для слиска ссылок на страницы объявлений
+
 #  code debug
 
 
@@ -266,20 +286,24 @@ cat_list = index_page.get_category_list()
 print("Первый принт:", *[i.text for i in cat_list], sep="\n")
 
 print(len(cat_list))
+subs = None
 for item in cat_list:
-    for el in index_page.set_category(item):
+    subs = index_page.set_category(item)
+    for el in subs:
         print(el.text, end=' | ')
     print()
+
+print(index_page.set_subcategory(subs[2]))  # метод работает, переходит в нужный раздел и возвращает url раздела
 
 
 #del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу
 
 # Проверяем работу парсера данных со страницы объявления
-#page1 = PageDataParser("https://www.avito.ru/moskva/vodnyy_transport/novaya_parusnaya_yahta_antila_26_classik_pr.belarus_1175058901", my_driver)
+#page1 = PageDataParser("https://www.avito.ru/moskva/avtomobili/volkswagen_touareg_3.0_at_2010_155_000_km_4003097201", my_driver)
 
 # Выводим информацию, которую мы спарсили в виде <Ключ> - <Значение>.
-#for key, value in page1().items():
-#    print(key, value, sep=" - ")
+'''for key, value in page1().items():
+    print(key, value, sep=" - ")'''
 
 # Закрываем вкладку бразуера (если вкладка последняя, то окно), теперь драйвер можно удалять
 manager.close_webdriver()

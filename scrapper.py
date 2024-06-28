@@ -269,10 +269,14 @@ class CategoryParser:
             self.driver.get(url)
         time.sleep(3)
         product_xpath = '//div[@data-marker="catalog-serp"]/div[@data-marker="item"]'
-        required_number_of_webpages = number_of_products // 50 + 1  # 50 - count of products in one webpage
-        pagination_items_xpath = '//ul[@data-marker="pagination-button"]/li'
-        actual_number_of_webpages = self.driver.find_elements(By.XPATH, pagination_items_xpath)[-2]
-        if not len(actual_number_of_webpages):  # todo проверить как работает это блок
+        pagination_items_xpath = '//ul[@data-marker="pagination-button"]/li[-1]'
+        total_count_of_products = int(self.driver.find_element(
+            By.XPATH,
+            '//span[@data-marker="page-title/count"]').text.strip()  # todo убрать пробел из числа, падает программа
+        )
+        total_count_of_products = min(total_count_of_products, number_of_products)
+        number_of_webpages_to_parse = total_count_of_products // 50 + 1
+        for i in range(number_of_webpages_to_parse):
             products_list = self.driver.find_elements(By.XPATH, product_xpath)
             for product in products_list:
                 product.click()
@@ -280,11 +284,17 @@ class CategoryParser:
                 current_page = PageDataParser(self.driver.current_url, self.driver)
                 print(current_page())
                 self.driver.back()
+                del current_page  # Возможно из-за этой строки будет удаляться драйвер но скорее всего нет
                 time.sleep(2)
-                return len(products_list)
-        else:
-            # todo Написать логику при количестве страниц больше одной
 
+            if i < number_of_webpages_to_parse - 1:
+                next_page_button = self.driver.find_element(
+                    By.XPATH,
+                    pagination_items_xpath
+                )
+                next_page_button.click()
+                time.sleep(3)
+        return len(products_list)
 
 class ParserConfigurator:
 

@@ -56,17 +56,18 @@ class PageDataParser:
         self.url = self.verify_url(url)
         self.driver.implicitly_wait(10)
 
-    def verify_url(self, url):
+    @staticmethod
+    def verify_url(url):
         if not isinstance(url, str):
             raise TypeError("Ссылка должна быть строкой")
         elif not url.startswith("https://www.avito.ru/"):
             raise ValueError("Ссылка должна иметь домен www.avito.ru")
         elif not url:
             raise ValueError("Ссылка должна быть непустой строкой")
-        try:
-            self.driver.get(url)
-        except Exception:
+        if not isinstance(url, str):
             print("Ссылка не корректна!")
+            return
+        return url
 
     def get_product_id(self) -> int:
         element = self.driver.find_element(By.XPATH, self.ID)
@@ -129,7 +130,7 @@ class PageDataParser:
 
     def __call__(self, *args, **kwargs):
         """ Method to get dict of page's data """
-
+        time.sleep(3)
         page_data_dict = {
             "ID": self.get_product_id(),
             "TITLE": self.get_product_title(),
@@ -186,7 +187,7 @@ class CategoryParser:
         :param chosen_category: a webelement of category selected by user
         :return: String-message that notifies that the category has been selected
         """
-        time.sleep(3)
+        time.sleep(2)
         category_list_xpath = '//div[@class="new-rubricator-content-leftcontent-_hhyV"]'
         if not len(self.driver.find_elements(By.XPATH, category_list_xpath)):
             raise NoSuchElementException("На странице в данный момент времени нет окна выбора категории.")
@@ -217,7 +218,6 @@ class CategoryParser:
         :return: URL of opened page
         """
         selected_subcategory_element.click()
-        time.sleep(2)
         return self.driver.current_url
 
     # todo создать метод get_sort_settings() -> element, затем можно нужный элемент передавать в данный метод
@@ -270,22 +270,33 @@ class CategoryParser:
         time.sleep(3)
         product_xpath = '//div[@data-marker="catalog-serp"]/div[@data-marker="item"]'
         pagination_items_xpath = '//ul[@data-marker="pagination-button"]/li[-1]'
-        total_count_of_products = int(self.driver.find_element(
+        total_count_of_products = self.driver.find_element(
             By.XPATH,
-            '//span[@data-marker="page-title/count"]').text.strip()  # todo убрать пробел из числа, падает программа
-        )
-        total_count_of_products = min(total_count_of_products, number_of_products)
+            '//span[@data-marker="page-title/count"]'
+        ).text
+        total_count_of_products = total_count_of_products.replace(" ", "")
+        total_count_of_products = min(int(total_count_of_products), number_of_products)
+        print(total_count_of_products, number_of_products)
         number_of_webpages_to_parse = total_count_of_products // 50 + 1
+        products_remaining = total_count_of_products
         for i in range(number_of_webpages_to_parse):
             products_list = self.driver.find_elements(By.XPATH, product_xpath)
+            main_window = self.driver.current_window_handle
             for product in products_list:
                 product.click()
                 time.sleep(3)
+                all_windows = self.driver.window_handles
+                new_window = [window for window in all_windows if window != main_window][0]
+                self.driver.switch_to.window(new_window)
                 current_page = PageDataParser(self.driver.current_url, self.driver)
                 print(current_page())
-                self.driver.back()
                 del current_page  # Возможно из-за этой строки будет удаляться драйвер но скорее всего нет
-                time.sleep(2)
+                self.driver.close()
+                self.driver.switch_to.window(main_window)
+                products_remaining -= 1
+
+                if products_remaining == 0:
+                    return len(products_list)
 
             if i < number_of_webpages_to_parse - 1:
                 next_page_button = self.driver.find_element(
@@ -293,7 +304,7 @@ class CategoryParser:
                     pagination_items_xpath
                 )
                 next_page_button.click()
-                time.sleep(3)
+                time.sleep(2)
         return len(products_list)
 
 class ParserConfigurator:

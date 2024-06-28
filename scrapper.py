@@ -7,8 +7,6 @@ from datetime import timedelta, date
 import time
 import re
 
-# todo Главная проблема: обойти блокировки по IP!
-
 
 class WebDriverManager:
 
@@ -54,7 +52,6 @@ class PageDataParser:
     def __init__(self, url: str, driver: webdriver):
         #  todo Когда буду делать парсинг данных асинхронно, добавить сохранение и изменение контекста вкладки
         #  todo Реализоваь функцию, которая будет открывать новую вкладку в браузере и сохранять контекст вкладки
-        #  todo При использовании close() будет удаляться вкладка на которой фокус т.е на текущей
         self.driver = driver
         self.url = self.verify_url(url)
         self.driver.implicitly_wait(10)
@@ -151,7 +148,9 @@ class SearchFilter:
     pass
 
 
-class CategoryParser:  # todo Настроить ограничения на количество объявлений в парсинге. Также не обрабатываем никакие команды в процессе обработки действующего запроса. На данном этапе парсинг будет синхронным.
+class CategoryParser:
+
+    __MAX_COUNT_OF_PAGES = 100
 
     def __init__(self, new_driver: webdriver):
         self.driver = new_driver
@@ -165,12 +164,11 @@ class CategoryParser:  # todo Настроить ограничения на к�
             return "Некорректное наименование локации!"
         return location.title().strip()
 
-    def filter_configuration(self):
-        pass
-
     def get_category_list(self):
-
-        """ Method returns list of web elements of categories """
+        """
+        Method opens modal window which allows to user to select category and subcategory.
+        :return: iterable object which contains webelements of each category
+        """
         time.sleep(5)
         show_categories_xpath = '//button[@data-marker="top-rubricator/all-categories"]'
         show_categories_button_element = self.driver.find_element(By.XPATH, show_categories_xpath)
@@ -180,38 +178,44 @@ class CategoryParser:  # todo Настроить ограничения на к�
         category_list_elements = self.driver.find_elements(By.XPATH, category_list_xpath)
         return category_list_elements
 
-    def set_category(self, chosen_category):  # todo вынести получение подкатегорий в отдельный метод
+    def set_category(self, chosen_category):
         """
-        Метод будет принимать в себя выбранный пользователем элемент (категорию)
-        Метод будет так же, как и get_category_list, переходить в раздел категорий, и фокусироваться на нужной
-
-        :return: Список подкатегорий данный категории
+        Method selects the category selected by the user.
+        Required conditions:
+         - Modal window with all categories is visible.
+        :param chosen_category: a webelement of category selected by user
+        :return: String-message that notifies that the category has been selected
         """
         time.sleep(3)
         category_list_xpath = '//div[@class="new-rubricator-content-leftcontent-_hhyV"]'
         if not len(self.driver.find_elements(By.XPATH, category_list_xpath)):
             raise NoSuchElementException("На странице в данный момент времени нет окна выбора категории.")
         chosen_category.click()
-        print("chosen_category clicked")
+        return f"Установлена категория: {chosen_category.text.strip()}"
+
+    def get_subcategories(self):
+        """
+        Required conditions in which method can work correct:
+         - Modal window to choose category is visible.
+         - Category is selected (method set_category was called before current method)
+        :return: Iterable object which contains all found subcategories
+        """
+        show_more_buttons_xpath = '//button[@data-marker="top-rubricator/more-button"]'
+        show_more_button_elements = self.driver.find_elements(By.XPATH, show_more_buttons_xpath)
+        for button in show_more_button_elements:
+            button.click()
         subcategories = self.driver.find_elements(
             By.XPATH,
             '//a[@data-name and @data-cid]'
         )
-
-        # todo ОБЯЗАТЕЛЬНО: метод парсит не все подкатегории, нужно прожимать кнопки "ещё ...",
-        # затем уже парсить список подкатегорий
-
         return subcategories
 
     def set_subcategory(self, selected_subcategory_element):
         """
-        На вход поступает элемент списка подкатегории.
-        Затем метод кликает на выбранный пользоватетем пункт
-        По окончании работы метода загружается страница с объявлениями выбранной категории и подкатегории.
-
-        :return: Метод возвращает ссылку на открытую страницу *self.driver.current_url
+        The method clicks on the subcategories selected by the user to open a page with products of this subcategory.
+        :param selected_subcategory_element: a webelement of subcategory selected by user
+        :return: URL of opened page
         """
-
         selected_subcategory_element.click()
         time.sleep(2)
         return self.driver.current_url
@@ -272,7 +276,11 @@ class ParserConfigurator:
     def select_export_format(self):  # Выбираем формата файла вывода данных (.xlsx, .csv)
         pass
 
-# todo Реализовать возможность парсинга для слиска ссылок на страницы объявлений
+
+# todo Реализовать возможность парсинга для списка ссылок на страницы объявлений
+# Экспериментальный класс, не факт что будет именно такая реализация
+class ParseLotsOfProducts:
+    pass
 
 #  code debug
 
@@ -283,17 +291,10 @@ index_page = CategoryParser(my_driver)  # Используем драйвер в
 #print(index_page.set_search_location("Махачкала"))  # Проверка работы метода смены локации поиска объявлений
 
 cat_list = index_page.get_category_list()
-print("Первый принт:", *[i.text for i in cat_list], sep="\n")
-
-print(len(cat_list))
-subs = None
-for item in cat_list:
-    subs = index_page.set_category(item)
-    for el in subs:
-        print(el.text, end=' | ')
-    print()
-
-print(index_page.set_subcategory(subs[2]))  # метод работает, переходит в нужный раздел и возвращает url раздела
+index_page.set_category(cat_list[2])
+subcat = index_page.get_subcategories()
+url_subcat = index_page.set_subcategory(subcat[6])
+print(url_subcat)
 
 
 #del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу

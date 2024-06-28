@@ -264,6 +264,27 @@ class CategoryParser:
         new_location_element = self.driver.find_element(By.XPATH, current_location_xpath)
         return f"Локация для поиска изменена на {new_location_element.text} или похожую"
 
+    def parse_products(self, number_of_products: int, url: str):
+        if self.driver.current_url != url and not url:
+            self.driver.get(url)
+        time.sleep(3)
+        product_xpath = '//div[@data-marker="catalog-serp"]/div[@data-marker="item"]'
+        required_number_of_webpages = number_of_products // 50 + 1  # 50 - count of products in one webpage
+        pagination_items_xpath = '//ul[@data-marker="pagination-button"]/li'
+        actual_number_of_webpages = self.driver.find_elements(By.XPATH, pagination_items_xpath)[-2]
+        if not len(actual_number_of_webpages):  # todo проверить как работает это блок
+            products_list = self.driver.find_elements(By.XPATH, product_xpath)
+            for product in products_list:
+                product.click()
+                time.sleep(3)
+                current_page = PageDataParser(self.driver.current_url, self.driver)
+                print(current_page())
+                self.driver.back()
+                time.sleep(2)
+                return len(products_list)
+        else:
+            # todo Написать логику при количестве страниц больше одной
+
 
 class ParserConfigurator:
 
@@ -294,7 +315,7 @@ cat_list = index_page.get_category_list()
 index_page.set_category(cat_list[2])
 subcat = index_page.get_subcategories()
 url_subcat = index_page.set_subcategory(subcat[6])
-print(url_subcat)
+index_page.parse_products(10, url_subcat)
 
 
 #del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу

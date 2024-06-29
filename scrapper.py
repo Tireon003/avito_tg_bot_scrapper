@@ -14,6 +14,7 @@ class WebDriverManager:
 
     def __init__(self):
         self.__options.page_load_strategy = "eager"
+        self.__options.add_argument('--headless')  # makes browser's window not visible
         self.__options.add_experimental_option("detach", True)
         self.__options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.__options.add_experimental_option('useAutomationExtension', False)
@@ -130,7 +131,7 @@ class PageDataParser:
 
     def __call__(self, *args, **kwargs):
         """ Method to get dict of page's data """
-        time.sleep(3)
+        time.sleep(2)
         page_data_dict = {
             "ID": self.get_product_id(),
             "TITLE": self.get_product_title(),
@@ -170,11 +171,11 @@ class CategoryParser:
         Method opens modal window which allows to user to select category and subcategory.
         :return: iterable object which contains webelements of each category
         """
-        time.sleep(5)
+        time.sleep(4)
         show_categories_xpath = '//button[@data-marker="top-rubricator/all-categories"]'
         show_categories_button_element = self.driver.find_element(By.XPATH, show_categories_xpath)
         show_categories_button_element.click()
-        time.sleep(2)
+        time.sleep(1)
         category_list_xpath = '//div[@class="new-rubricator-content-leftcontent-_hhyV"]/div[@data-marker]'
         category_list_elements = self.driver.find_elements(By.XPATH, category_list_xpath)
         return category_list_elements
@@ -187,7 +188,6 @@ class CategoryParser:
         :param chosen_category: a webelement of category selected by user
         :return: String-message that notifies that the category has been selected
         """
-        time.sleep(2)
         category_list_xpath = '//div[@class="new-rubricator-content-leftcontent-_hhyV"]'
         if not len(self.driver.find_elements(By.XPATH, category_list_xpath)):
             raise NoSuchElementException("На странице в данный момент времени нет окна выбора категории.")
@@ -269,13 +269,13 @@ class CategoryParser:
             self.driver.get(url)
         time.sleep(3)
         product_xpath = '//div[@data-marker="catalog-serp"]/div[@data-marker="item"]'
-        pagination_items_xpath = '//ul[@data-marker="pagination-button"]/li[-1]'
+        pagination_items_xpath = '//ul[@data-marker="pagination-button"]/li'
         total_count_of_products = self.driver.find_element(
             By.XPATH,
             '//span[@data-marker="page-title/count"]'
         ).text
         total_count_of_products = total_count_of_products.replace(" ", "")
-        total_count_of_products = min(int(total_count_of_products), number_of_products)
+        total_count_of_products = min(int(total_count_of_products), number_of_products, self.__MAX_COUNT_OF_PAGES)
         print(total_count_of_products, number_of_products)
         number_of_webpages_to_parse = total_count_of_products // 50 + 1
         products_remaining = total_count_of_products
@@ -284,13 +284,12 @@ class CategoryParser:
             main_window = self.driver.current_window_handle
             for product in products_list:
                 product.click()
-                time.sleep(3)
                 all_windows = self.driver.window_handles
                 new_window = [window for window in all_windows if window != main_window][0]
                 self.driver.switch_to.window(new_window)
                 current_page = PageDataParser(self.driver.current_url, self.driver)
                 print(current_page())
-                del current_page  # Возможно из-за этой строки будет удаляться драйвер но скорее всего нет
+                del current_page
                 self.driver.close()
                 self.driver.switch_to.window(main_window)
                 products_remaining -= 1
@@ -299,13 +298,14 @@ class CategoryParser:
                     return len(products_list)
 
             if i < number_of_webpages_to_parse - 1:
-                next_page_button = self.driver.find_element(
+                next_page_button = self.driver.find_elements(
                     By.XPATH,
                     pagination_items_xpath
-                )
+                )[-1]
                 next_page_button.click()
                 time.sleep(2)
         return len(products_list)
+
 
 class ParserConfigurator:
 
@@ -332,12 +332,16 @@ my_driver = manager.init_webdriver()  # Получаем ссылку на со�
 index_page = CategoryParser(my_driver)  # Используем драйвер в нужном классе
 #print(index_page.set_search_location("Махачкала"))  # Проверка работы метода смены локации поиска объявлений
 
+start = time.time()
+
 cat_list = index_page.get_category_list()
 index_page.set_category(cat_list[2])
 subcat = index_page.get_subcategories()
 url_subcat = index_page.set_subcategory(subcat[6])
-index_page.parse_products(10, url_subcat)
+index_page.parse_products(120, url_subcat)
 
+stop = time.time()
+print(f'Время выполнения парсинга: {stop - start}')
 
 #del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу
 

@@ -304,7 +304,6 @@ class CategoryParser:
                 )[-1]
                 next_page_button.click()
                 time.sleep(2)
-        return len(products_list)
 
 
 class ParserConfigurator:

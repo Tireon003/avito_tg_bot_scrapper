@@ -17,6 +17,10 @@ class WebDriverManager:
         self.__options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.__options.add_experimental_option('useAutomationExtension', False)
         self.__options.add_argument("--disable-blink-features=AutomationControlled")
+        self.__options.add_argument(f"--disable-blink-features=AutomationControlled")
+        self.__options.add_argument(
+            f"--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
         self.driver = webdriver.Chrome(options=self.__options)
         print("Драйвен инициализирован")  # debug for devs
 

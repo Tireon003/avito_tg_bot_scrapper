@@ -27,9 +27,9 @@ async def parse_url(message: types.Message):
         text_answer = ""
         for key, value in parsed_page().items():
             text_answer += f'{key}: {value}\n'
-        await message.answer(text_answer)
+        await message.reply(text_answer)
     except ValueError:
-        await message.answer("Введена некорректная ссылка на объявление!")
+        await message.reply("Введена некорректная ссылка на объявление!")
 
 # Запуск процесса поллинга новых апдейтов
 async def main():

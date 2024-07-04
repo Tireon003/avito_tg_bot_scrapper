@@ -22,12 +22,14 @@ async def cmd_start(message: types.Message):
 # todo Добавить кнопку под ответным сообщением (см. Идеи проекта ТГ)
 @dp.message(F.text)
 async def parse_url(message: types.Message):
-    parsed_page = sc.PageDataParser(message.text, sc.my_driver)
-    text_answer = ""
-    for key, value in parsed_page().items():
-        text_answer += f'{key}: {value}\n'
-    await message.answer(text_answer)
-
+    try:
+        parsed_page = sc.PageDataParser(message.text, sc.my_driver)
+        text_answer = ""
+        for key, value in parsed_page().items():
+            text_answer += f'{key}: {value}\n'
+        await message.answer(text_answer)
+    except ValueError:
+        await message.answer("Введена некорректная ссылка на объявление!")
 
 # Запуск процесса поллинга новых апдейтов
 async def main():

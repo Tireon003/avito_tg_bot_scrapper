@@ -53,6 +53,7 @@ class PageDataParser:
         #  todo Реализоваь функцию, которая будет открывать новую вкладку в браузере и сохранять контекст вкладки
         self.driver = driver
         self.url = self.verify_url(url)
+        self.driver.get(self.url)
         self.driver.implicitly_wait(10)
 
     @staticmethod
@@ -326,29 +327,32 @@ class ParseLotsOfProducts:
 
 manager = WebDriverManager()  # Создается экземпляр драйвера
 my_driver = manager.init_webdriver()  # Получаем ссылку на созданный драйвер
-index_page = CategoryParser(my_driver)  # Используем драйвер в нужном классе
-#print(index_page.set_search_location("Махачкала"))  # Проверка работы метода смены локации поиска объявлений
 
-start = time.time()
+if __name__ == "__main__":
 
-cat_list = index_page.get_category_list()
-index_page.set_category(cat_list[2])
-subcat = index_page.get_subcategories()
-url_subcat = index_page.set_subcategory(subcat[6])
-index_page.parse_products(120, url_subcat)
+    index_page = CategoryParser(my_driver)  # Используем драйвер в нужном классе
+    #print(index_page.set_search_location("Махачкала"))  # Проверка работы метода смены локации поиска объявлений
 
-stop = time.time()
-print(f'Время выполнения парсинга: {stop - start}')
+    start = time.time()
 
-#del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу
+    cat_list = index_page.get_category_list()
+    index_page.set_category(cat_list[2])
+    subcat = index_page.get_subcategories()
+    url_subcat = index_page.set_subcategory(subcat[6])
+    index_page.parse_products(120, url_subcat)
 
-# Проверяем работу парсера данных со страницы объявления
-#page1 = PageDataParser("https://www.avito.ru/moskva/avtomobili/volkswagen_touareg_3.0_at_2010_155_000_km_4003097201", my_driver)
+    stop = time.time()
+    print(f'Время выполнения парсинга: {stop - start}')
 
-# Выводим информацию, которую мы спарсили в виде <Ключ> - <Значение>.
-'''for key, value in page1().items():
-    print(key, value, sep=" - ")'''
+    #del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу
 
-# Закрываем вкладку бразуера (если вкладка последняя, то окно), теперь драйвер можно удалять
-manager.close_webdriver()
+    # Проверяем работу парсера данных со страницы объявления
+    page1 = PageDataParser("https://www.avito.ru/moskva/avtomobili/volkswagen_touareg_3.0_at_2010_155_000_km_4003097201", my_driver)
+
+    # Выводим информацию, которую мы спарсили в виде <Ключ> - <Значение>.
+    for key, value in page1().items():
+        print(key, value, sep=" - ")
+
+    # Закрываем вкладку бразуера (если вкладка последняя, то окно), теперь драйвер можно удалять
+    manager.close_webdriver()
 

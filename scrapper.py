@@ -29,7 +29,7 @@ class WebDriverManager:
         return self.driver
 
     def close_webdriver(self):
-        print("Драйвер удален")  # debug for devs
+        print("Драйвер завершил работу")  # debug for devs
         self.driver.close()
 
 
@@ -328,6 +328,8 @@ class ParseLotsOfProducts:
 
 #  code debug
 
+"""
+
 
 manager = WebDriverManager()  # Создается экземпляр драйвера
 my_driver = manager.init_webdriver()  # Получаем ссылку на созданный драйвер
@@ -359,4 +361,4 @@ if __name__ == "__main__":
 
     # Закрываем вкладку бразуера (если вкладка последняя, то окно), теперь драйвер можно удалять
     manager.close_webdriver()
-
+"""

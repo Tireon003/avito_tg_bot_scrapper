@@ -44,6 +44,7 @@ async def show_table(message: types.Message):
 class AddToTableCallbackFactory(CallbackData, prefix='addtotable_fab'):
     action: str
     value: int
+    user_id: int
 
 
 @dp.message(F.text)
@@ -57,17 +58,26 @@ async def parse_url(message: types.Message):
             parsed_data_base64 = base64.b64encode(parsed_data_json.encode()).decode()
             table[parsed_data["ID"]] = parsed_data_base64
             user_data_from_db = await db.get_user_data(message.from_user.id)
+            print(user_data_from_db, type(user_data_from_db), "Принт из parse_url")
             current_user_id_list = json.loads(user_data_from_db).keys()
             builder = InlineKeyboardBuilder()
             if parsed_data["ID"] not in current_user_id_list:
                 builder.button(
                     text="Добавить объявление в таблицу",
-                    callback_data=AddToTableCallbackFactory(action="add", value=parsed_data["ID"])
+                    callback_data=AddToTableCallbackFactory(
+                        action="add",
+                        value=parsed_data["ID"],
+                        user_id=message.from_user.id
+                    )
                 )
             else:
                 builder.button(
                     text="Удалить объявление из таблицы",
-                    callback_data=AddToTableCallbackFactory(action="pop", value=parsed_data["ID"])
+                    callback_data=AddToTableCallbackFactory(
+                        action="pop",
+                        value=parsed_data["ID"],
+                        user_id=message.from_user.id
+                    )
                 )
             text_answer = ""
             for key, value in parsed_data.items():
@@ -85,18 +95,20 @@ async def parse_url(message: types.Message):
 async def put_product_into_table(callback: types.CallbackQuery, callback_data: AddToTableCallbackFactory):
     async with Database() as db:
         product_id = callback_data.value
+        user_id = callback_data.user_id
         page_data_json = base64.b64decode(table[product_id]).decode()
         page_data = json.loads(page_data_json)
-        user_data_from_db = await db.get_user_data(callback.message.from_user.id)
+        user_data_from_db = await db.get_user_data(user_id)
+        print(user_data_from_db, type(user_data_from_db), "Принт из коллбека parse_url")
         current_user_data = json.loads(user_data_from_db)  # todo Здесь выдается исключение NoneType, пофиксить
         print(current_user_data, type(current_user_data), "принт в коллбэке")
         if callback_data.action == "add":
             current_user_data[product_id] = page_data
-            await db.update_user_data(callback.message.from_user.id, current_user_data)
+            await db.update_user_data(user_id, current_user_data)  # todo здесь передаю dict в параметр, нужно вынести преобразователь из dict в base64 в отдельные модуль converter
             await callback.message.answer(f"Объявление с id: {page_data['ID']} добавлено в таблицу.")
         elif callback_data.action == "pop":
             del current_user_data[product_id]
-            await db.update_user_data(callback.message.from_user.id, current_user_data)
+            await db.update_user_data(user_id, current_user_data)  # todo здесь передаю dict в параметр, нужно вынести преобразователь из dict в base64 в отдельные модуль converter
             await callback.message.answer(f"Объявление с id: {page_data['ID']} удалено из таблицы.")
         else:
             await callback.message.answer(f'Произошла ошибка, повторите снова!')

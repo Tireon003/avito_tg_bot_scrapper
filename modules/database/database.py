@@ -35,6 +35,7 @@ class Database:
             await cursor.execute('SELECT data FROM users WHERE id = ?', (user_id, ))
             user_data = await cursor.fetchone()
             print(user_data[0], "в геттере БД")
+            aiter(cursor)
             return user_data[0]
 
     def __del__(self):

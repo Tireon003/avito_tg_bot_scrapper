@@ -24,7 +24,7 @@ dp = Dispatcher()
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     async with Database() as db:
-        db.add_user(message.from_user.id)
+        await db.add_user(message.from_user.id)
         await message.answer("Scrap from Avito.ru!")
 
 # Условное хранилище таблицы
@@ -56,7 +56,8 @@ async def parse_url(message: types.Message):
             parsed_data_json = json.dumps(parsed_data)
             parsed_data_base64 = base64.b64encode(parsed_data_json.encode()).decode()
             table[parsed_data["ID"]] = parsed_data_base64
-            current_user_id_list = json.loads(await db.get_user_data(message.from_user.id)).keys()
+            user_data_from_db = await db.get_user_data(message.from_user.id)
+            current_user_id_list = json.loads(user_data_from_db).keys()
             builder = InlineKeyboardBuilder()
             if parsed_data["ID"] not in current_user_id_list:
                 builder.button(
@@ -86,7 +87,8 @@ async def put_product_into_table(callback: types.CallbackQuery, callback_data: A
         product_id = callback_data.value
         page_data_json = base64.b64decode(table[product_id]).decode()
         page_data = json.loads(page_data_json)
-        current_user_data = json.loads(await db.get_user_data(callback.message.from_user.id))  # todo Здесь выдается исключение NoneType, пофиксить
+        user_data_from_db = await db.get_user_data(callback.message.from_user.id)
+        current_user_data = json.loads(user_data_from_db)  # todo Здесь выдается исключение NoneType, пофиксить
         print(current_user_data, type(current_user_data), "принт в коллбэке")
         if callback_data.action == "add":
             current_user_data[product_id] = page_data

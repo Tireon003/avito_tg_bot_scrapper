@@ -20,7 +20,7 @@ class Database:
         await self.connection.close()
         print("Менеджер БД завершил свою работу")
 
-    async def add_user(self, user_id, data=""):
+    async def add_user(self, user_id, data="{}"):
         async with self.connection.cursor() as cursor:
             await cursor.execute('INSERT OR IGNORE INTO users (id, data) VALUES (?, ?)', (user_id, data))
             await self.connection.commit()

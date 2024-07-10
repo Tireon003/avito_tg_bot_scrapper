@@ -86,7 +86,7 @@ async def put_product_into_table(callback: types.CallbackQuery, callback_data: A
         product_id = callback_data.value
         page_data_json = base64.b64decode(table[product_id]).decode()
         page_data = json.loads(page_data_json)
-        current_user_data = json.loads(await db.get_user_data(callback.message.from_user.id))
+        current_user_data = json.loads(await db.get_user_data(callback.message.from_user.id))  # todo Здесь выдается исключение NoneType, пофиксить
         print(current_user_data, type(current_user_data), "принт в коллбэке")
         if callback_data.action == "add":
             current_user_data[product_id] = page_data

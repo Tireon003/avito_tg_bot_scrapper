@@ -1,12 +1,10 @@
 import asyncio
 import logging
 import json
-import base64
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.callback_data import CallbackData
 from aiogram.filters.command import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from collections import defaultdict
 from bot_config import config
 from modules.scrapper.scrapper import WebDriverManager, PageDataParser
 from modules.database.database import Database
@@ -27,12 +25,6 @@ async def cmd_start(message: types.Message):
         await db.add_user(message.from_user.id)
         await message.answer("Scrap from Avito.ru!")
 
-# Условное хранилище таблицы
-
-table = defaultdict()
-
-# конец хранилища
-
 
 @dp.message(Command("table"))
 async def show_table(message: types.Message):
@@ -41,6 +33,14 @@ async def show_table(message: types.Message):
         await message.answer(user_data)
 
 
+@dp.message(Command("clear"))
+async def show_table(message: types.Message):
+    async with Database() as db:
+        await db.update_user_data(message.from_user.id, '{}')
+        await message.reply("Таблица очищена!")
+
+
+# todo Разобраться где хранить фабрики коллбеков
 class AddToTableCallbackFactory(CallbackData, prefix='addtotable_fab'):
     action: str
     value: int
@@ -55,10 +55,8 @@ async def parse_url(message: types.Message):
             parsed_page = PageDataParser(message.text, new_driver_manager.init_webdriver())
             parsed_data = parsed_page()
             parsed_data_json = json.dumps(parsed_data)
-            parsed_data_base64 = base64.b64encode(parsed_data_json.encode()).decode()
-            table[parsed_data["ID"]] = parsed_data_base64
+            await db.put_product_to_history(parsed_data["ID"], parsed_data_json)
             user_data_from_db = await db.get_user_data(message.from_user.id)
-            print(user_data_from_db, type(user_data_from_db), "Принт из parse_url")
             current_user_id_list = json.loads(user_data_from_db).keys()
             builder = InlineKeyboardBuilder()
             if parsed_data["ID"] not in current_user_id_list:
@@ -91,25 +89,29 @@ async def parse_url(message: types.Message):
             new_driver_manager.close_webdriver()
 
 
+# todo Добавить изменение настроек inline-кнопки сообщения в зависимости от action.
+# todo Вынести InlineKeyboardBuilder в отдельную функцию
+# todo Вынести преобразование данных в json и обратно в отдельный класс
+# todo Декомпозировать код
 @dp.callback_query(AddToTableCallbackFactory.filter())
 async def put_product_into_table(callback: types.CallbackQuery, callback_data: AddToTableCallbackFactory):
     async with Database() as db:
         product_id = callback_data.value
         user_id = callback_data.user_id
-        page_data_json = base64.b64decode(table[product_id]).decode()
-        page_data = json.loads(page_data_json)
+        current_product_info = await db.get_product_from_history(product_id)
+        page_data = json.loads(current_product_info[1])
         user_data_from_db = await db.get_user_data(user_id)
-        print(user_data_from_db, type(user_data_from_db), "Принт из коллбека parse_url")
-        current_user_data = json.loads(user_data_from_db)  # todo Здесь выдается исключение NoneType, пофиксить
-        print(current_user_data, type(current_user_data), "принт в коллбэке")
+        current_user_data = json.loads(user_data_from_db)
         if callback_data.action == "add":
             current_user_data[product_id] = page_data
-            await db.update_user_data(user_id, current_user_data)  # todo здесь передаю dict в параметр, нужно вынести преобразователь из dict в base64 в отдельные модуль converter
-            await callback.message.answer(f"Объявление с id: {page_data['ID']} добавлено в таблицу.")
+            current_user_data_json = json.dumps(current_user_data)
+            await db.update_user_data(user_id, current_user_data_json)
+            await callback.message.answer(f"Объявление с id: {product_id} добавлено в таблицу.")
         elif callback_data.action == "pop":
             del current_user_data[product_id]
-            await db.update_user_data(user_id, current_user_data)  # todo здесь передаю dict в параметр, нужно вынести преобразователь из dict в base64 в отдельные модуль converter
-            await callback.message.answer(f"Объявление с id: {page_data['ID']} удалено из таблицы.")
+            current_user_data_json = json.dumps(current_user_data)
+            await db.update_user_data(user_id, current_user_data_json)
+            await callback.message.answer(f"Объявление с id: {product_id} удалено из таблицы.")
         else:
             await callback.message.answer(f'Произошла ошибка, повторите снова!')
 

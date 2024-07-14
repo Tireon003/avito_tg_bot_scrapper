@@ -13,6 +13,4 @@ Planned future functionality:
  - Selenium
  - Re
  - Aiogram
-
-In the future:
- - MongoDB (to store each user and his data)
+ - aiosqlite

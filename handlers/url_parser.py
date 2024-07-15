@@ -29,7 +29,7 @@ async def parse_url(message: types.Message):
                 text_answer += f'{key}: {value}\n'
             await message.reply(
                 text_answer,
-                reply_markup=action_with_product_inline(action_tag,parsed_data["ID"],message.from_user.id)
+                reply_markup=action_with_product_inline(action_tag, parsed_data["ID"], message.from_user.id)
             )
         except ValueError:
             await message.reply("Введена некорректная ссылка на объявление!")
@@ -39,10 +39,6 @@ async def parse_url(message: types.Message):
             new_driver_manager.close_webdriver()
 
 
-# todo Добавить изменение настроек inline-кнопки сообщения в зависимости от action.
-# todo Вынести InlineKeyboardBuilder в отдельную функцию
-# todo Вынести преобразование данных в json и обратно в отдельный класс
-# todo Декомпозировать код
 @router.callback_query(AddToTableCallbackFactory.filter())
 async def put_product_into_table(callback: types.CallbackQuery, callback_data: AddToTableCallbackFactory):
     async with Database() as db:

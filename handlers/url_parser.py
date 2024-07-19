@@ -1,4 +1,7 @@
 import json
+
+from aiogram.types import ReplyKeyboardRemove
+
 from factories.add_to_table_fab import AddToTableCallbackFactory
 from keyboards.product_inline_keyboard import action_with_product_inline
 from modules.scrapper.scrapper import WebDriverManager, PageDataParser
@@ -28,13 +31,19 @@ async def parse_url(message: types.Message):
             for key, value in parsed_data.items():
                 text_answer += f'{key}: {value}\n'
             await message.reply(
-                text_answer,
+                text=text_answer,
                 reply_markup=action_with_product_inline(action_tag, parsed_data["ID"], message.from_user.id)
             )
         except ValueError:
-            await message.reply("Введена некорректная ссылка на объявление!")
+            await message.reply(
+                text="Введена некорректная ссылка на объявление!",
+                reply_markup=ReplyKeyboardRemove()
+            )
         except NoSuchElementException:
-            await message.reply("Не удалось загрузить страницу с объявлением. Повторите попытку позже...")
+            await message.reply(
+                text="Не удалось загрузить страницу с объявлением. Повторите попытку позже...",
+                reply_markup=ReplyKeyboardRemove()
+            )
         finally:
             new_driver_manager.close_webdriver()
 

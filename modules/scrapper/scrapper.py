@@ -291,7 +291,7 @@ class CategoryParser:
                 new_window = [window for window in all_windows if window != main_window][0]
                 self.driver.switch_to.window(new_window)
                 current_page = PageDataParser(self.driver.current_url, self.driver)
-                print(current_page())
+                yield current_page()  # todo сомнительно, проверить
                 del current_page
                 self.driver.close()
                 self.driver.switch_to.window(main_window)

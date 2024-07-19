@@ -1,3 +1,5 @@
+import json
+
 from aiogram import Router, types, F
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -30,7 +32,9 @@ async def init_category_parse(message: types.Message, state: FSMContext):
     driver = WebDriverManager()
     category_parser = CategoryParser(driver.init_webdriver())
     category_label_elements = category_parser.get_category_list()
-    categories_title = [el.text for el in category_label_elements]
+    categories_title = list([el.text for el in category_label_elements])
+    print(categories_title)
+
     await message.answer(
         text="Выберите категорию:",
         reply_markup=categories_keyboard(categories_title)
@@ -38,7 +42,7 @@ async def init_category_parse(message: types.Message, state: FSMContext):
     await state.set_state(ParseCategoryState.choosing_category)
 
 
-@router.message(ParseCategoryState.choosing_category, F.text.in_(categories_title))
+@router.message(ParseCategoryState.choosing_category)  # (, F.text.in_(categories_title))
 async def category_is_chosen(message: types.Message, state: FSMContext):
     global category_label_elements, \
         categories_title, \
@@ -46,25 +50,79 @@ async def category_is_chosen(message: types.Message, state: FSMContext):
         category_parser, \
         subcategories_title, \
         subcategory_label_elements
+    if message.text in categories_title:
+        category_parser.set_category(category_label_elements[categories_title.index(message.text)])
+        subcategory_label_elements = category_parser.get_subcategories()
+        subcategories_title = [el.text.strip() for el in subcategory_label_elements]
+        await message.answer(
+            text="Отлично, теперь выберите подкатегорию:",
+            reply_markup=subcategories_keyboard(subcategories_title)
+        )
+        await state.set_state(ParseCategoryState.choosing_subcategory)
+    else:
+        await message.answer(
+            text="Введенной категории не существует, отмена операции.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        del category_parser
+        driver.close_webdriver()
 
-    #await state.update_data(chosen_category=category_label_elements[categories_title.index(message.text)])
-    chosen_category = category_label_elements[categories_title.index(message.text)]
-    subcategory_label_elements = category_parser.get_subcategories()
-    subcategories_title = [el.text for el in subcategory_label_elements]
-    await message.answer(
-        text="Отлично, теперь выберите подкатегорию:",
-        reply_markup=subcategories_keyboard(subcategories_title)
-    )
-    await state.set_state(ParseCategoryState.choosing_subcategory)
 
-# todo При вводе верной категории срабатывает данный хендлер, исправить
-@router.message(ParseCategoryState.choosing_category)
-async def non_existant_category(message: types.Message, state: FSMContext):
-    global category_parser, driver
-    await message.answer(
-        text="Введенной категории не существует, отмена операции.",
-        reply_markup=ReplyKeyboardRemove()
-    )
-    await state.clear()
-    del category_parser
-    driver.close_webdriver()
+@router.message(ParseCategoryState.choosing_subcategory)
+async def subcategory_is_chosen(message: types.Message, state: FSMContext):
+    global driver, \
+        category_parser, \
+        subcategories_title, \
+        subcategory_label_elements
+    if message.text in subcategories_title:
+        category_url = category_parser.set_subcategory(
+            selected_subcategory_element=subcategory_label_elements[subcategories_title.index(message.text)]
+        )
+        await state.update_data(url=category_url)
+        await message.answer(
+            text="Отлично. Теперь введите нужное количество объявлений. Максимум: 100. Если в категории количество " +
+                 "объявлений меньше, чем вы указали, будет получено столько, скольки доступно.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.set_state(ParseCategoryState.entering_number_of_products)
+    else:
+        await message.answer(
+            text="Введенной подкатегории не существует, отмена операции.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        del category_parser
+        driver.close_webdriver()
+
+
+@router.message(ParseCategoryState.entering_number_of_products)
+async def number_of_products_entered(message: types.Message, state: FSMContext):
+    global category_parser
+    state_data = await state.get_data()
+    products_number = message.text
+    category_url = state_data['url']
+    if not isinstance(products_number, int) or (isinstance(products_number, int) and not (1 <= products_number <= 100)):  # todo условие неверно отрабаывает, переписать
+        await message.answer(
+            text="Введен неверный формат числа. Отмена операции...",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        del category_parser
+        driver.close_webdriver()
+    else:
+        category_gen = category_parser.parse_products(
+            number_of_products=products_number,
+            url=category_url
+        )
+
+        for item in category_gen:
+            await message.answer(
+                text=json.dumps(item)
+            )
+        else:
+            await message.answer("Парсинг полностью завершен!")
+
+        await state.clear()
+        del category_parser
+        driver.close_webdriver()

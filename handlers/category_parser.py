@@ -102,7 +102,7 @@ async def number_of_products_entered(message: types.Message, state: FSMContext):
     state_data = await state.get_data()
     products_number = message.text
     category_url = state_data['url']
-    if not isinstance(products_number, int) or (isinstance(products_number, int) and not (1 <= products_number <= 100)):  # todo условие неверно отрабаывает, переписать
+    if not products_number.isdigit() or 1 > int(products_number) > 100:  # todo условие неверно отрабаывает, переписать
         await message.answer(
             text="Введен неверный формат числа. Отмена операции...",
             reply_markup=ReplyKeyboardRemove()
@@ -111,15 +111,17 @@ async def number_of_products_entered(message: types.Message, state: FSMContext):
         del category_parser
         driver.close_webdriver()
     else:
+        products_number = int(products_number)
         category_gen = category_parser.parse_products(
             number_of_products=products_number,
             url=category_url
         )
 
         for item in category_gen:
-            await message.answer(
-                text=json.dumps(item)
-            )
+            text_answer = ''
+            for key, value in item.items():
+                text_answer += f'{key}: {str(value)[:300]}\n'
+            await message.answer(text=text_answer)
         else:
             await message.answer("Парсинг полностью завершен!")
 

@@ -114,8 +114,11 @@ class PageDataParser:
         return total_views
 
     def get_product_address(self) -> str:
-        element = self.driver.find_element(By.XPATH, self.ADDRESS)
-        return element.text
+        try:
+            element = self.driver.find_element(By.XPATH, self.ADDRESS)
+            return element.text
+        except NoSuchElementException:
+            return "Empty"
 
     def get_product_specs(self) -> list:
         specs_xpath = "//div[@data-marker='item-view/item-params']"
@@ -291,7 +294,7 @@ class CategoryParser:
                 new_window = [window for window in all_windows if window != main_window][0]
                 self.driver.switch_to.window(new_window)
                 current_page = PageDataParser(self.driver.current_url, self.driver)
-                yield current_page()  # todo сомнительно, проверить
+                yield current_page()
                 del current_page
                 self.driver.close()
                 self.driver.switch_to.window(main_window)

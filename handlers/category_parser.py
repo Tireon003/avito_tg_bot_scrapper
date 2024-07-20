@@ -1,32 +1,36 @@
 from aiogram import Router, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import ReplyKeyboardRemove
-
+from aiogram.types import ReplyKeyboardRemove, FSInputFile
 from keyboards.select_category_keyboard import categories_keyboard
 from keyboards.select_subcategory_keyboard import subcategories_keyboard
 from modules.scrapper import WebDriverManager, CategoryParser
+from modules.table_manager import Table
 from states.parse_category_state import ParseCategoryState
 
-router = Router()
-
-# TODO: Сделать так, чтобы можно было парсить категорию нескольким пользователям одновременно
-
+router: Router = Router()
 driver: WebDriverManager
 category_parser: CategoryParser
+pending: bool = False
+
+# TODO: Сделать так, чтобы можно было парсить категорию нескольким пользователям одновременно
 
 
 @router.message(Command("category"), StateFilter(None))
 async def init_category_parse(message: types.Message, state: FSMContext):
-    global driver, category_parser
-
+    global driver, category_parser, pending
+    if pending:
+        return await message.answer(
+            text="Парсер категорий сейчас занят, повторите попытку позже...",
+            reply_markup=ReplyKeyboardRemove()
+        )
+    pending = True
     driver = WebDriverManager()
+    table = Table()
     category_parser = CategoryParser(driver.init_webdriver())
     category_label_elements = category_parser.get_category_list()
     categories_title = list([el.text for el in category_label_elements])
-
-    await state.update_data(cat_titles=categories_title, cat_elements=category_label_elements)
-
+    await state.update_data(cat_titles=categories_title, cat_elements=category_label_elements, table=table)
     await message.answer(
         text="Выберите категорию:",
         reply_markup=categories_keyboard(categories_title)
@@ -36,10 +40,8 @@ async def init_category_parse(message: types.Message, state: FSMContext):
 
 @router.message(ParseCategoryState.choosing_category)
 async def category_is_chosen(message: types.Message, state: FSMContext):
-    global driver, category_parser
-
+    global driver, category_parser, pending
     state_data = await state.get_data()
-
     if message.text in state_data['cat_titles']:
         category_parser.set_category(state_data['cat_elements'][state_data['cat_titles'].index(message.text)])
         subcategory_label_elements = category_parser.get_subcategories()
@@ -58,11 +60,12 @@ async def category_is_chosen(message: types.Message, state: FSMContext):
         await state.clear()
         del category_parser
         driver.close_webdriver()
+        pending = False
 
 
 @router.message(ParseCategoryState.choosing_subcategory)
 async def subcategory_is_chosen(message: types.Message, state: FSMContext):
-    global driver, category_parser
+    global driver, category_parser, pending
     state_data = await state.get_data()
     if message.text in state_data['subcat_titles']:
         category_url = category_parser.set_subcategory(
@@ -83,12 +86,14 @@ async def subcategory_is_chosen(message: types.Message, state: FSMContext):
         await state.clear()
         del category_parser
         driver.close_webdriver()
+        pending = False
 
 
 @router.message(ParseCategoryState.entering_number_of_products)
 async def number_of_products_entered(message: types.Message, state: FSMContext):
-    global category_parser
+    global category_parser, driver, pending
     state_data = await state.get_data()
+    table = state_data['table']
     products_number = message.text
     category_url = state_data['url']
     if not products_number.isdigit() or 1 > int(products_number) > 100:
@@ -96,24 +101,24 @@ async def number_of_products_entered(message: types.Message, state: FSMContext):
             text="Введен неверный формат числа. Отмена операции...",
             reply_markup=ReplyKeyboardRemove()
         )
-        await state.clear()
-        del category_parser
-        driver.close_webdriver()
     else:
         products_number = int(products_number)
         category_gen = category_parser.parse_products(
             number_of_products=products_number,
             url=category_url
         )
-
         for item in category_gen:
-            text_answer = ''
-            for key, value in item.items():
-                text_answer += f'{key}: {str(value)[:300]}\n'
+            text_answer = f'ID {item["ID"]} parsed'
+            table.push(item)
             await message.answer(text=text_answer)
         else:
-            await message.answer("Парсинг полностью завершен!")
-
-        await state.clear()
-        del category_parser
-        driver.close_webdriver()
+            csv_filepath = table.get_csv()
+            csv_file = FSInputFile(csv_filepath, filename=csv_filepath)
+            await message.answer(text="Парсинг полностью завершен!")
+            await message.answer_document(
+                document=csv_file
+            )
+    await state.clear()
+    del category_parser
+    driver.close_webdriver()
+    pending = False

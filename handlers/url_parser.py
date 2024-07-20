@@ -9,7 +9,7 @@ from selenium.common import NoSuchElementException
 from modules.database.database import Database
 from aiogram import types, F, Router
 
-router = Router()
+router: Router = Router()
 
 
 @router.message(F.text)

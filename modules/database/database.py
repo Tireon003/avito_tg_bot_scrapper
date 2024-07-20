@@ -27,7 +27,7 @@ class Database:
         await self.connection.close()
         print("Менеджер БД завершил свою работу")
 
-    async def add_user(self, user_id: int, data: str="{}"):
+    async def add_user(self, user_id: int, data: str = "{}"):
         async with self.connection.cursor() as cursor:
             await cursor.execute('INSERT OR IGNORE INTO users (id, data) VALUES (?, ?)', (user_id, data))
             await self.connection.commit()
@@ -59,7 +59,7 @@ class Database:
                 (product_id, )
             )
             data = await cursor.fetchone()
-            return data if data else None  # todo Проверить что при пустом списке возвращается None а не исключение
+            return data if data else None
 
     def __del__(self):
         print(f"Объект {self.__class__.__name__} Удален")

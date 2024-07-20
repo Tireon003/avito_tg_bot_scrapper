@@ -1,13 +1,11 @@
 from aiogram import types, Router
 from aiogram.filters.command import Command
 from aiogram.types import ReplyKeyboardRemove
-
 from modules.database.database import Database
 
-router = Router()
+router: Router = Router()
 
 
-# Хэндлер на команду /start
 @router.message(Command("start"))
 async def cmd_start(message: types.Message):
     async with Database() as db:

@@ -53,8 +53,6 @@ class PageDataParser:
     CATEGORY = "//div[@data-marker='breadcrumbs']"  # Category of the product
 
     def __init__(self, url: str, driver: webdriver):
-        #  todo Когда буду делать парсинг данных асинхронно, добавить сохранение и изменение контекста вкладки
-        #  todo Реализоваь функцию, которая будет открывать новую вкладку в браузере и сохранять контекст вкладки
         self.driver = driver
         self.url = self.verify_url(url)
         self.driver.get(self.url)
@@ -147,13 +145,9 @@ class PageDataParser:
             "CATEGORIES": self.get_product_category_path(),
             "DESCRIPTION": self.get_product_description(),
             "VIEWS": self.get_product_total_views(),
-            "SPECS": self.get_product_specs()
+            "SPECS": str(self.get_product_specs())
         }
         return page_data_dict
-
-
-class SearchFilter:
-    pass
 
 
 class CategoryParser:
@@ -299,10 +293,8 @@ class CategoryParser:
                 self.driver.close()
                 self.driver.switch_to.window(main_window)
                 products_remaining -= 1
-
                 if products_remaining == 0:
                     return len(products_list)
-
             if i < number_of_webpages_to_parse - 1:
                 next_page_button = self.driver.find_elements(
                     By.XPATH,
@@ -310,58 +302,3 @@ class CategoryParser:
                 )[-1]
                 next_page_button.click()
                 time.sleep(2)
-
-
-class ParserConfigurator:
-
-    def configure_location(self):  # Перенести метод из класса CategoryParser сюда
-        pass
-
-    def reset_configuration(self):  # Метод для сброса настроек по умолчанию (Локация: Москва, Формат вывода: .csv)
-        pass
-
-    def select_export_format(self):  # Выбираем формата файла вывода данных (.xlsx, .csv)
-        pass
-
-
-# todo Реализовать возможность парсинга для списка ссылок на страницы объявлений
-# Экспериментальный класс, не факт что будет именно такая реализация
-class ParseLotsOfProducts:
-    pass
-
-#  code debug
-
-"""
-
-
-manager = WebDriverManager()  # Создается экземпляр драйвера
-my_driver = manager.init_webdriver()  # Получаем ссылку на созданный драйвер
-
-if __name__ == "__main__":
-
-    index_page = CategoryParser(my_driver)  # Используем драйвер в нужном классе
-    #print(index_page.set_search_location("Махачкала"))  # Проверка работы метода смены локации поиска объявлений
-
-    start = time.time()
-
-    cat_list = index_page.get_category_list()
-    index_page.set_category(cat_list[2])
-    subcat = index_page.get_subcategories()
-    url_subcat = index_page.set_subcategory(subcat[6])
-    index_page.parse_products(120, url_subcat)
-
-    stop = time.time()
-    print(f'Время выполнения парсинга: {stop - start}')
-
-    #del index_page  # Удаляем объект CategoryParser, удостоверились, что драйвер продолжает работу
-
-    # Проверяем работу парсера данных со страницы объявления
-    page1 = PageDataParser("https://www.avito.ru/moskva/avtomobili/volkswagen_touareg_3.0_at_2010_155_000_km_4003097201", my_driver)
-
-    # Выводим информацию, которую мы спарсили в виде <Ключ> - <Значение>.
-    for key, value in page1().items():
-        print(key, value, sep=" - ")
-
-    # Закрываем вкладку бразуера (если вкладка последняя, то окно), теперь драйвер можно удалять
-    manager.close_webdriver()
-"""

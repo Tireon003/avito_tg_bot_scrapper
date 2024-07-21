@@ -1,3 +1,4 @@
+import os
 from aiogram import Router, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -118,6 +119,7 @@ async def number_of_products_entered(message: types.Message, state: FSMContext):
             await message.answer_document(
                 document=csv_file
             )
+            os.remove(csv_filepath)
     await state.clear()
     del category_parser
     driver.close_webdriver()

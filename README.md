@@ -10,7 +10,7 @@ Planned future functionality:
 
 ### Stack
  - Python
+ - Pandas
  - Selenium
- - Re
  - Aiogram
  - aiosqlite

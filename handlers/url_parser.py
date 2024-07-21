@@ -1,4 +1,6 @@
 import json
+
+from aiogram.enums import ParseMode
 from aiogram.types import ReplyKeyboardRemove
 from factories.add_to_table_fab import AddToTableCallbackFactory
 from keyboards.product_inline_keyboard import action_with_product_inline
@@ -66,16 +68,23 @@ async def put_product_into_table(callback: types.CallbackQuery, callback_data: A
                 )
             )
         elif callback_data.action == "pop":
-            current_user_data.pop(str(product_id))
-            current_user_data_json = json.dumps(current_user_data)
-            await db.update_user_data(user_id, current_user_data_json)
-            await callback.message.reply(f"Объявление с id: {product_id} удалено из таблицы.")
-            await callback.message.edit_reply_markup(
-                reply_markup=action_with_product_inline(
-                    action_key="add",
-                    product_id=product_id,
-                    user_id=user_id
+            try:
+                current_user_data.pop(str(product_id))
+                current_user_data_json = json.dumps(current_user_data)
+                await db.update_user_data(user_id, current_user_data_json)
+                await callback.message.reply(f"Объявление с id: {product_id} удалено из таблицы.")
+            except KeyError:
+                await callback.message.reply(
+                    text=f"Удаление не удалось. Объявление с ID {product_id} не найдено." +
+                    "Возможно, ранее Вы воспользовались командой /clear."
                 )
-            )
+            finally:
+                await callback.message.edit_reply_markup(
+                    reply_markup=action_with_product_inline(
+                        action_key="add",
+                        product_id=product_id,
+                        user_id=user_id
+                    )
+                )
         else:
             await callback.message.answer(f'Произошла ошибка, повторите снова!')

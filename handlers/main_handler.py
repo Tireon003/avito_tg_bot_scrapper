@@ -1,4 +1,5 @@
 import json
+import os
 from aiogram import types, Router
 from aiogram.filters.command import Command
 from aiogram.types import ReplyKeyboardRemove, FSInputFile
@@ -55,6 +56,7 @@ async def save_to_csv(callback: types.CallbackQuery, callback_data: SaveTableToF
         csv_file_input = FSInputFile(csv_output_file_path, filename=csv_output_file_path)
         await callback.message.delete_reply_markup()
         await callback.message.answer_document(document=csv_file_input)
+        os.remove(csv_output_file_path)
         del table_df
 
 

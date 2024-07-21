@@ -21,18 +21,16 @@ async def parse_url(message: types.Message):
             parsed_data = parsed_page()
             parsed_data_json = json.dumps(parsed_data)
             await db.put_product_to_history(parsed_data["ID"], parsed_data_json)
-            user_data_from_db = await db.get_user_data(message.from_user.id)
-            current_user_id_list = json.loads(user_data_from_db).keys()
             text_answer = ""
-            if parsed_data["ID"] not in current_user_id_list:
-                action_tag = "add"
-            else:
-                action_tag = "pop"
             for key, value in parsed_data.items():
-                text_answer += f'{key}: {value}\n'
+                text_answer += f'{key}: {str(value)[:200]}\n'
             await message.reply(
                 text=text_answer,
-                reply_markup=action_with_product_inline(action_tag, parsed_data["ID"], message.from_user.id)
+                reply_markup=action_with_product_inline(
+                    action_key="add",
+                    product_id=parsed_data["ID"],
+                    user_id=message.from_user.id
+                )
             )
         except ValueError:
             await message.reply(
@@ -61,11 +59,25 @@ async def put_product_into_table(callback: types.CallbackQuery, callback_data: A
             current_user_data[product_id] = page_data
             current_user_data_json = json.dumps(current_user_data)
             await db.update_user_data(user_id, current_user_data_json)
-            await callback.message.answer(f"Объявление с id: {product_id} добавлено в таблицу.")
+            await callback.message.reply(f"Объявление с id: {product_id} добавлено в таблицу.")
+            await callback.message.edit_reply_markup(
+                reply_markup=action_with_product_inline(
+                    action_key="pop",
+                    product_id=product_id,
+                    user_id=user_id
+                )
+            )
         elif callback_data.action == "pop":
-            del current_user_data[product_id]
+            current_user_data.pop(str(product_id))
             current_user_data_json = json.dumps(current_user_data)
             await db.update_user_data(user_id, current_user_data_json)
-            await callback.message.answer(f"Объявление с id: {product_id} удалено из таблицы.")
+            await callback.message.reply(f"Объявление с id: {product_id} удалено из таблицы.")
+            await callback.message.edit_reply_markup(
+                reply_markup=action_with_product_inline(
+                    action_key="add",
+                    product_id=product_id,
+                    user_id=user_id
+                )
+            )
         else:
             await callback.message.answer(f'Произошла ошибка, повторите снова!')

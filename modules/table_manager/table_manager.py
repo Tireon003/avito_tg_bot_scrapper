@@ -6,11 +6,11 @@ class Table:
 
     def __init__(self):
         self.__table = pd.DataFrame(
-            columns=["ID", "TITLE", "DATE", "PRICE", "ADDRESS", "CATEGORIES", "DESCRIPTION","VIEWS", "SPECS"]
+            columns=["ID", "TITLE", "DATE", "PRICE", "ADDRESS", "CATEGORIES", "DESCRIPTION", "VIEWS", "SPECS"]
         )
 
     @staticmethod
-    def verify_data(data: dict):
+    def verify_data(data: dict) -> dict:
         if not isinstance(data, dict):
             raise TypeError("Параметр должен иметь тип данных <dict>")
         else:
@@ -24,11 +24,10 @@ class Table:
                 else:
                     return data
 
-    def push(self, data: dict):
+    def push(self, data: dict) -> None:
         self.__table = self.__table._append(self.verify_data(data), ignore_index=True)
 
-    def get_csv(self):
+    def get_csv(self) -> str:
         file_path = f'./output_tables/csv_output_{dt.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.csv'
         self.__table.to_csv(file_path, sep=";")
         return file_path
-

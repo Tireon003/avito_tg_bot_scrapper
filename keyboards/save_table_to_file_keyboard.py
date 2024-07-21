@@ -1,8 +1,9 @@
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from factories.save_table_to_csv_fab import SaveTableToFileCSV
 
 
-def action_table_to_csv(user_id: int):
+def action_table_to_csv(user_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text="Сохранить в формате .csv",

@@ -37,7 +37,7 @@ class Database:
             await cursor.execute('UPDATE users SET data = ? WHERE id = ?', (new_data, user_id))
             await self.connection.commit()
 
-    async def get_user_data(self, user_id: int):
+    async def get_user_data(self, user_id: int) -> str:
         async with self.connection.cursor() as cursor:
             await cursor.execute('SELECT data FROM users WHERE id = ?', (user_id, ))
             user_data = await cursor.fetchone()
@@ -52,7 +52,7 @@ class Database:
             )
             await self.connection.commit()
 
-    async def get_product_from_history(self, product_id: int):
+    async def get_product_from_history(self, product_id: int) -> tuple | None:
         async with self.connection.cursor() as cursor:
             await cursor.execute(
                 "SELECT * FROM products_history WHERE product_id = ?",

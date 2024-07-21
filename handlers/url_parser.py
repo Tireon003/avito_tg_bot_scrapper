@@ -1,7 +1,5 @@
 import json
-
 from aiogram.types import ReplyKeyboardRemove
-
 from factories.add_to_table_fab import AddToTableCallbackFactory
 from keyboards.product_inline_keyboard import action_with_product_inline
 from modules.scrapper.scrapper import WebDriverManager, PageDataParser

@@ -1,8 +1,9 @@
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from factories.add_to_table_fab import AddToTableCallbackFactory
 
 
-def action_with_product_inline(action_key: str, product_id: int, user_id: int):
+def action_with_product_inline(action_key: str, product_id: int, user_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     # Actions, available for current keyboard
@@ -13,7 +14,7 @@ def action_with_product_inline(action_key: str, product_id: int, user_id: int):
 
     # Action validation
     if action_key not in actions.keys():
-        raise ValueError("Передано невалидное действие, введите 'add' либо 'pop'.")
+        raise ValueError("Передано невалидное действие, разрешено только 'add' и 'pop'.")
 
     builder.button(
         text=actions[action_key],  # Label for inline-keyboard
@@ -25,4 +26,3 @@ def action_with_product_inline(action_key: str, product_id: int, user_id: int):
     )
 
     return builder.as_markup()
-

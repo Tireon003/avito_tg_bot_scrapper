@@ -5,6 +5,8 @@ from datetime import timedelta, date
 import time
 import re
 
+from selenium.webdriver.remote.webelement import WebElement
+
 
 class WebDriverManager:
 
@@ -12,14 +14,15 @@ class WebDriverManager:
 
     def __init__(self):
         self.__options.page_load_strategy = "eager"
-        #self.__options.add_argument('--headless')  # makes browser's window not visible
+        # self.__options.add_argument('--headless')  # makes browser's window not visible
         self.__options.add_experimental_option("detach", True)
         self.__options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.__options.add_experimental_option('useAutomationExtension', False)
         self.__options.add_argument("--disable-blink-features=AutomationControlled")
         self.__options.add_argument(f"--disable-blink-features=AutomationControlled")
         self.__options.add_argument(
-            f"--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            f"--user-agent=Mozilla/5.0 (X11; Linux x86_64) " +
+            f"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
         self.driver = webdriver.Chrome(options=self.__options)
         print("Драйвен инициализирован")  # debug for devs
@@ -59,17 +62,15 @@ class PageDataParser:
         self.driver.implicitly_wait(10)
 
     @staticmethod
-    def verify_url(url):
+    def verify_url(url: str) -> str:
         if not isinstance(url, str):
             raise TypeError("Ссылка должна быть строкой")
         elif not url.startswith("https://www.avito.ru/"):
             raise ValueError("Ссылка должна иметь домен www.avito.ru")
         elif not url:
             raise ValueError("Ссылка должна быть непустой строкой")
-        if not isinstance(url, str):
-            print("Ссылка не корректна!")
-            return
-        return url
+        else:
+            return url
 
     def get_product_id(self) -> int:
         element = self.driver.find_element(By.XPATH, self.ID)
@@ -160,13 +161,13 @@ class CategoryParser:
         self.driver.implicitly_wait(7)
 
     @staticmethod
-    def verify_location(location: str):
+    def verify_location(location: str) -> str:
         location_without_dash = location.replace("-", "")
         if not location_without_dash.isalpha():
             return "Некорректное наименование локации!"
         return location.title().strip()
 
-    def get_category_list(self):
+    def get_category_list(self) -> WebElement:
         """
         Method opens modal window which allows to user to select category and subcategory.
         :return: iterable object which contains webelements of each category
@@ -180,7 +181,7 @@ class CategoryParser:
         category_list_elements = self.driver.find_elements(By.XPATH, category_list_xpath)
         return category_list_elements
 
-    def set_category(self, chosen_category):
+    def set_category(self, chosen_category: WebElement):
         """
         Method selects the category selected by the user.
         Required conditions:
@@ -192,9 +193,8 @@ class CategoryParser:
         if not len(self.driver.find_elements(By.XPATH, category_list_xpath)):
             raise NoSuchElementException("На странице в данный момент времени нет окна выбора категории.")
         chosen_category.click()
-        return f"Установлена категория: {chosen_category.text.strip()}"
 
-    def get_subcategories(self):
+    def get_subcategories(self) -> WebElement:
         """
         Required conditions in which method can work correct:
          - Modal window to choose category is visible.
@@ -211,13 +211,14 @@ class CategoryParser:
         )
         return subcategories
 
-    def set_subcategory(self, selected_subcategory_element):
+    def set_subcategory(self, selected_subcategory_element: WebElement) -> str:
         """
         The method clicks on the subcategories selected by the user to open a page with products of this subcategory.
         :param selected_subcategory_element: a webelement of subcategory selected by user
         :return: URL of opened page
         """
         selected_subcategory_element.click()
+        time.sleep(0.5)
         return self.driver.current_url
 
     # todo создать метод get_sort_settings() -> element, затем можно нужный элемент передавать в данный метод

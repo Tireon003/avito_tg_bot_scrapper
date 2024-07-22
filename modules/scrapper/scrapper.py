@@ -269,7 +269,7 @@ class CategoryParser:
         if self.driver.current_url != url and not url:
             self.driver.get(url)
         time.sleep(3)
-        product_xpath = '//div[@data-marker="catalog-serp"]/div[@data-marker="item"]'
+        product_xpath = '//a[@data-marker="item-title"]'
         pagination_items_xpath = '//ul[@data-marker="pagination-button"]/li'
         total_count_of_products = self.driver.find_element(
             By.XPATH,
@@ -287,6 +287,7 @@ class CategoryParser:
                 product.click()
                 all_windows = self.driver.window_handles
                 new_window = [window for window in all_windows if window != main_window][0]
+                print(*[window for window in all_windows if window != main_window])
                 self.driver.switch_to.window(new_window)
                 current_page = PageDataParser(self.driver.current_url, self.driver)
                 yield current_page()

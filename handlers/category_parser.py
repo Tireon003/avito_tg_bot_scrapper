@@ -17,6 +17,26 @@ pending: bool = False
 # TODO: Сделать так, чтобы можно было парсить категорию нескольким пользователям одновременно
 
 
+@router.message(Command("cancel"))
+async def cancel_category_parser(message: types.Message, state: FSMContext):
+    global pending, driver, category_parser
+    current_state = await state.get_state()
+    if current_state is None:
+        await message.answer(
+            text="В данный момент отменять нечего.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+    else:
+        await message.answer(
+            text="Парсинг отменен.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        del category_parser
+        driver.close_webdriver()
+    pending = False
+
+
 @router.message(Command("category"), StateFilter(None))
 async def init_category_parse(message: types.Message, state: FSMContext):
     global driver, category_parser, pending
@@ -124,3 +144,4 @@ async def number_of_products_entered(message: types.Message, state: FSMContext):
     del category_parser
     driver.close_webdriver()
     pending = False
+

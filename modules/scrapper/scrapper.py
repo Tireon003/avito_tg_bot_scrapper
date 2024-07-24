@@ -1,11 +1,12 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support import expected_conditions as EC
 from datetime import timedelta, date
 import time
 import re
-
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support.wait import WebDriverWait
 
 
 class WebDriverManager:
@@ -81,8 +82,11 @@ class PageDataParser:
         return element.text
 
     def get_product_price(self) -> str:
-        element = self.driver.find_element(By.XPATH, self.PRICE)
-        return element.get_attribute("content")
+        try:
+            element = self.driver.find_element(By.XPATH, self.PRICE)
+            return element.text
+        except NoSuchElementException:
+            return "Цена не указана"
 
     def get_product_category_path(self) -> list:
         cat_list = []
@@ -163,8 +167,9 @@ class CategoryParser:
     @staticmethod
     def verify_location(location: str) -> str:
         location_without_dash = location.replace("-", "")
-        if not location_without_dash.isalpha():
-            return "Некорректное наименование локации!"
+        location_without_spaces = location_without_dash.replace(" ", "")
+        if not location_without_spaces.isalpha():
+            raise ValueError("Название категории должно быть словом")
         return location.title().strip()
 
     def get_category_list(self) -> WebElement:
@@ -238,22 +243,24 @@ class CategoryParser:
             return f"Метод сортировки не изменен"
 
     def set_search_location(self, location_name: str):
-        location_name = self.verify_location(location_name)
+        location_name = self.verify_location(location_name).casefold()
         current_location_xpath = '//div[@data-marker="search-form/change-location"]'
         element = self.driver.find_element(By.XPATH, current_location_xpath)
         element.click()
         input_location_xpath = "//input[@data-marker='popup-location/region/search-input']"
-        input_location_element = self.driver.find_element(By.XPATH, input_location_xpath)
+        input_location_element = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, input_location_xpath))
+        )
         input_location_element.click()
+        time.sleep(0.5)
         input_location_element.clear()
-        time.sleep(1)
+        time.sleep(0.5)
         input_location_element.send_keys(location_name)
         time.sleep(1)
         found_locations_xpath = "//button[@data-marker='popup-location/region/custom-option([object Object])']"
         found_locations_list = self.driver.find_elements(By.XPATH, found_locations_xpath)
         for item in found_locations_list:
-            print(item.text)
-            if location_name == item.text.strip() or location_name + "," in item.text.strip():
+            if location_name == item.text.strip().casefold() or location_name + "," in item.text.strip().casefold():
                 item.click()
                 break
         else:
@@ -261,9 +268,7 @@ class CategoryParser:
         apply_changes_element_xpath = "//button[@data-marker='popup-location/save-button']"
         apply_button = self.driver.find_element(By.XPATH, apply_changes_element_xpath)
         apply_button.click()
-        time.sleep(2)
-        new_location_element = self.driver.find_element(By.XPATH, current_location_xpath)
-        return f"Локация для поиска изменена на {new_location_element.text} или похожую"
+        time.sleep(1)
 
     def parse_products(self, number_of_products: int, url: str):
         if self.driver.current_url != url and not url:

@@ -101,11 +101,10 @@ async def subcategory_is_chosen(message: types.Message, state: FSMContext):
         )
         await state.update_data(url=category_url)
         await message.answer(
-            text="Отлично. Теперь введите нужное количество объявлений. Максимум: 100. Если в категории количество " +
-                 "объявлений меньше, чем вы указали, будет получено столько, скольки доступно.",
+            text="Введите наименование населенного пункта или региона для поиска:",
             reply_markup=ReplyKeyboardRemove()
         )
-        await state.set_state(ParseCategoryState.entering_number_of_products)
+        await state.set_state(ParseCategoryState.choosing_location)
     else:
         await message.answer(
             text="Введенной подкатегории не существует, отмена операции.",
@@ -114,6 +113,20 @@ async def subcategory_is_chosen(message: types.Message, state: FSMContext):
         await state.clear()
         del parser
         driver.close_webdriver()
+
+
+@router.message(ParseCategoryState.choosing_location)
+async def location_is_chosen(message: types.Message, state: FSMContext):
+    state_data = await state.get_data()
+    driver = state_data["driver"]
+    parser = state_data["parser"]
+    parser.set_search_location(message.text)
+    await message.answer(
+        text="Отлично. Теперь введите нужное количество объявлений. Максимум: 100. Если в категории количество " +
+             "объявлений меньше, чем вы указали, будет получено столько, скольки доступно.",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.set_state(ParseCategoryState.entering_number_of_products)
 
 
 @router.message(ParseCategoryState.entering_number_of_products)

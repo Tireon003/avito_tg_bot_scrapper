@@ -17,7 +17,7 @@ class WebDriverManager:
 
     def __init__(self) -> None:
         self.__options.page_load_strategy = "eager"
-        # self.__options.add_argument('--headless')  # makes browser's window not visible
+        self.__options.add_argument('--headless')  # makes browser's window not visible
         self.__options.add_experimental_option("detach", True)
         self.__options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.__options.add_experimental_option('useAutomationExtension', False)

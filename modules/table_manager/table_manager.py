@@ -4,7 +4,7 @@ import datetime as dt
 
 class Table:
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.__table = pd.DataFrame(
             columns=["ID", "TITLE", "DATE", "PRICE", "ADDRESS", "CATEGORIES", "DESCRIPTION", "VIEWS", "SPECS"]
         )

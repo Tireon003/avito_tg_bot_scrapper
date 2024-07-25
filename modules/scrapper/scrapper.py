@@ -1,4 +1,6 @@
+import os
 from selenium import webdriver
+from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
@@ -13,26 +15,22 @@ class WebDriverManager:
 
     __options = webdriver.ChromeOptions()
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.__options.page_load_strategy = "eager"
         # self.__options.add_argument('--headless')  # makes browser's window not visible
         self.__options.add_experimental_option("detach", True)
         self.__options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.__options.add_experimental_option('useAutomationExtension', False)
         self.__options.add_argument("--disable-blink-features=AutomationControlled")
-        self.__options.add_argument(f"--disable-blink-features=AutomationControlled")
-        self.__options.add_argument(
-            f"--user-agent=Mozilla/5.0 (X11; Linux x86_64) " +
-            f"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
+        self.__options.add_argument(os.getenv('USER_AGENT'))
         self.driver = webdriver.Chrome(options=self.__options)
         print("Драйвен инициализирован")  # debug for devs
 
-    def init_webdriver(self):
+    def init_webdriver(self) -> WebDriver:
         print("Драйвер запущен")  # debug for devs
         return self.driver
 
-    def close_webdriver(self):
+    def close_webdriver(self) -> None:
         print("Драйвер завершил работу")  # debug for devs
         self.driver.close()
 
@@ -56,7 +54,7 @@ class PageDataParser:
     ADDRESS = "//span[@class='style-item-address__string-wt61A']"  # Seller's address
     CATEGORY = "//div[@data-marker='breadcrumbs']"  # Category of the product
 
-    def __init__(self, url: str, driver: webdriver):
+    def __init__(self, url: str, driver: webdriver) -> None:
         self.driver = driver
         self.url = self.verify_url(url)
         self.driver.get(self.url)
@@ -138,7 +136,7 @@ class PageDataParser:
                 product_specs.append((item_spec_name, item_spec_value))
         return product_specs
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> dict:
         """ Method to get dict of page's data """
         time.sleep(2)
         page_data_dict = {
@@ -159,7 +157,7 @@ class CategoryParser:
 
     __MAX_COUNT_OF_PAGES = 100
 
-    def __init__(self, new_driver: webdriver):
+    def __init__(self, new_driver: webdriver) -> None:
         self.driver = new_driver
         self.driver.get("https://www.avito.ru/")
         self.driver.implicitly_wait(7)
@@ -186,7 +184,7 @@ class CategoryParser:
         category_list_elements = self.driver.find_elements(By.XPATH, category_list_xpath)
         return category_list_elements
 
-    def set_category(self, chosen_category: WebElement):
+    def set_category(self, chosen_category: WebElement) -> None:
         """
         Method selects the category selected by the user.
         Required conditions:
@@ -226,6 +224,7 @@ class CategoryParser:
         time.sleep(0.5)
         return self.driver.current_url
 
+    '''
     # todo создать метод get_sort_settings() -> element, затем можно нужный элемент передавать в данный метод
     def change_sort_method(self, sort_method_value):
         sort_settings_button_xpath = '//span[@data-marker="sort/title"]'
@@ -241,8 +240,9 @@ class CategoryParser:
         else:
             sort_methods_elements[0].click()
             return f"Метод сортировки не изменен"
+    '''
 
-    def set_search_location(self, location_name: str):
+    def set_search_location(self, location_name: str) -> None:
         location_name = self.verify_location(location_name).casefold()
         current_location_xpath = '//div[@data-marker="search-form/change-location"]'
         element = self.driver.find_element(By.XPATH, current_location_xpath)
@@ -270,7 +270,7 @@ class CategoryParser:
         apply_button.click()
         time.sleep(1)
 
-    def parse_products(self, number_of_products: int, url: str):
+    def parse_products(self, number_of_products: int, url: str) -> int | None:
         if self.driver.current_url != url and not url:
             self.driver.get(url)
         time.sleep(3)

@@ -1,6 +1,4 @@
 import json
-
-from aiogram.enums import ParseMode
 from aiogram.types import ReplyKeyboardRemove
 from factories.add_to_table_fab import AddToTableCallbackFactory
 from keyboards.product_inline_keyboard import action_with_product_inline
@@ -13,7 +11,7 @@ router: Router = Router()
 
 
 @router.message(F.text)
-async def parse_url(message: types.Message):
+async def parse_url(message: types.Message) -> None:
     async with Database() as db:
         new_driver_manager = WebDriverManager()
         try:
@@ -47,7 +45,7 @@ async def parse_url(message: types.Message):
 
 
 @router.callback_query(AddToTableCallbackFactory.filter())
-async def put_product_into_table(callback: types.CallbackQuery, callback_data: AddToTableCallbackFactory):
+async def put_product_into_table(callback: types.CallbackQuery, callback_data: AddToTableCallbackFactory) -> None:
     async with Database() as db:
         product_id = callback_data.value
         user_id = callback_data.user_id

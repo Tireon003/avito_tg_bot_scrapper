@@ -12,7 +12,7 @@ router: Router = Router()
 
 
 @router.message(Command("start"))
-async def cmd_start(message: types.Message):
+async def cmd_start(message: types.Message) -> None:
     async with Database() as db:
         await db.add_user(message.from_user.id)
     await message.answer(
@@ -23,7 +23,7 @@ async def cmd_start(message: types.Message):
 
 
 @router.message(Command("table"))
-async def show_table(message: types.Message):
+async def show_table(message: types.Message) -> None:
     async with Database() as db:
         user_products_json = await db.get_user_data(message.from_user.id)
         user_products = json.loads(user_products_json)
@@ -45,7 +45,7 @@ async def show_table(message: types.Message):
 
 
 @router.callback_query(SaveTableToFileCSV.filter())
-async def save_to_csv(callback: types.CallbackQuery, callback_data: SaveTableToFileCSV):
+async def save_to_csv(callback: types.CallbackQuery, callback_data: SaveTableToFileCSV) -> None:
     async with Database() as db:
         table_df = Table()
         user_products_json = await db.get_user_data(callback_data.user_id)
@@ -61,7 +61,7 @@ async def save_to_csv(callback: types.CallbackQuery, callback_data: SaveTableToF
 
 
 @router.message(Command("clear"))
-async def show_table(message: types.Message):
+async def show_table(message: types.Message) -> None:
     async with Database() as db:
         await db.update_user_data(message.from_user.id, '{}')
         await message.reply(text="Таблица очищена!", reply_markup=ReplyKeyboardRemove())

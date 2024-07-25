@@ -10,20 +10,13 @@ from modules.table_manager import Table
 from states.parse_category_state import ParseCategoryState
 
 router: Router = Router()
-# driver: WebDriverManager
-# category_parser: CategoryParser
-# pending: bool = False
-
-
-# TODO: Сделать так, чтобы можно было парсить категорию нескольким пользователям одновременно
 
 
 @router.message(Command("cancel"))
-async def cancel_category_parser(message: types.Message, state: FSMContext):
+async def cancel_category_parser(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     state_data = await state.get_data()
     driver = state_data["driver"]
-    parser = state_data["parser"]
     if current_state is None:
         await message.answer(
             text="В данный момент отменять нечего.",
@@ -35,12 +28,11 @@ async def cancel_category_parser(message: types.Message, state: FSMContext):
             reply_markup=ReplyKeyboardRemove()
         )
         await state.clear()
-        del parser
         driver.close_webdriver()
 
 
 @router.message(Command("category"), StateFilter(None))
-async def init_category_parse(message: types.Message, state: FSMContext):
+async def init_category_parse(message: types.Message, state: FSMContext) -> None:
     driver = WebDriverManager()
     table = Table()
     category_parser = CategoryParser(driver.init_webdriver())
@@ -61,7 +53,7 @@ async def init_category_parse(message: types.Message, state: FSMContext):
 
 
 @router.message(ParseCategoryState.choosing_category)
-async def category_is_chosen(message: types.Message, state: FSMContext):
+async def category_is_chosen(message: types.Message, state: FSMContext) -> None:
     state_data = await state.get_data()
     driver = state_data["driver"]
     parser = state_data["parser"]
@@ -91,7 +83,7 @@ async def category_is_chosen(message: types.Message, state: FSMContext):
 
 
 @router.message(ParseCategoryState.choosing_subcategory)
-async def subcategory_is_chosen(message: types.Message, state: FSMContext):
+async def subcategory_is_chosen(message: types.Message, state: FSMContext) -> None:
     state_data = await state.get_data()
     driver = state_data["driver"]
     parser = state_data["parser"]
@@ -116,9 +108,8 @@ async def subcategory_is_chosen(message: types.Message, state: FSMContext):
 
 
 @router.message(ParseCategoryState.choosing_location)
-async def location_is_chosen(message: types.Message, state: FSMContext):
+async def location_is_chosen(message: types.Message, state: FSMContext) -> None:
     state_data = await state.get_data()
-    driver = state_data["driver"]
     parser = state_data["parser"]
     parser.set_search_location(message.text)
     await message.answer(
@@ -130,7 +121,7 @@ async def location_is_chosen(message: types.Message, state: FSMContext):
 
 
 @router.message(ParseCategoryState.entering_number_of_products)
-async def number_of_products_entered(message: types.Message, state: FSMContext):
+async def number_of_products_entered(message: types.Message, state: FSMContext) -> None:
     state_data = await state.get_data()
     table = state_data['table']
     driver = state_data["driver"]

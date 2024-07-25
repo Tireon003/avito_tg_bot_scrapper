@@ -3,7 +3,7 @@ import aiosqlite
 
 class Database:
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "Database":
         self.connection = await aiosqlite.connect('scrapper_users.db')
         async with self.connection.cursor() as cursor:
             await cursor.execute('''
@@ -23,16 +23,16 @@ class Database:
             print("Менеджер БД начал свою работу")
             return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         await self.connection.close()
         print("Менеджер БД завершил свою работу")
 
-    async def add_user(self, user_id: int, data: str = "{}"):
+    async def add_user(self, user_id: int, data: str = "{}") -> None:
         async with self.connection.cursor() as cursor:
             await cursor.execute('INSERT OR IGNORE INTO users (id, data) VALUES (?, ?)', (user_id, data))
             await self.connection.commit()
 
-    async def update_user_data(self, user_id: int, new_data: str):
+    async def update_user_data(self, user_id: int, new_data: str) -> None:
         async with self.connection.cursor() as cursor:
             await cursor.execute('UPDATE users SET data = ? WHERE id = ?', (new_data, user_id))
             await self.connection.commit()
@@ -44,7 +44,7 @@ class Database:
             aiter(cursor)
             return user_data[0]
 
-    async def put_product_to_history(self, product_id: int, product_data: str):
+    async def put_product_to_history(self, product_id: int, product_data: str) -> None:
         async with self.connection.cursor() as cursor:
             await cursor.execute(
                 'INSERT OR IGNORE INTO products_history (product_id, product_data) VALUES (?, ?)',
@@ -61,5 +61,5 @@ class Database:
             data = await cursor.fetchone()
             return data if data else None
 
-    def __del__(self):
+    def __del__(self) -> None:
         print(f"Объект {self.__class__.__name__} Удален")
